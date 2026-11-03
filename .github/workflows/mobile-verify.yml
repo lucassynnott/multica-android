@@ -40,6 +40,9 @@ on:
       - "pnpm-workspace.yaml"
       - "turbo.json"
       - ".github/workflows/mobile-verify.yml"
+  # Lets the workflow be run on demand without needing a path-matching push —
+  # used to verify the Android client after changes that do not touch apps/mobile.
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
