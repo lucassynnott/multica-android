@@ -101,6 +101,11 @@ jobs:
     env:
       # Pin turbo's filesystem cache somewhere actions/cache can address.
       TURBO_CACHE_DIR: .turbo/cache
+      # `next build` for @multica/web exceeds V8's default heap on the runner
+      # and aborts with exit 134 ("Reached heap limit"), which reads as a build
+      # failure rather than the memory limit it is. The runner has 16 GB, so
+      # give Node a ceiling it will not reach before the machine does.
+      NODE_OPTIONS: --max-old-space-size=6144
     steps:
       - name: Checkout
         uses: actions/checkout@v6
