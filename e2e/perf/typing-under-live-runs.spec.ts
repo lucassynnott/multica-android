@@ -91,11 +91,32 @@ function responseFor(pathname: string): unknown | undefined {
     case "/api/agents": case "/api/runtimes": case "/api/squads":
     case "/api/agent-task-snapshot": case "/api/invitations": case "/api/inbox":
     case "/api/inbox/unread-summary": case "/api/pins": case "/api/chat/sessions":
+    case "/api/skills": case "/api/chat/pending-tasks": case "/api/issue-wakeup-summaries":
+    case "/api/agent-run-counts": case "/api/agent-activity-30d":
       return [];
     case "/api/chat/pending-tasks/has-any": return { has_pending: false };
     case `/api/workspaces/${fx.WORKSPACE_ID}/members`: return [];
     case "/api/projects": return { projects: [], total: 0 };
     case "/api/issues": return { issues: [], total: 0 };
+    // Issue views, their per-scope preferences and the autopilot list are
+    // mounted by the sidebar on every page. Empty shapes keep the run valid
+    // without adding work; an unmocked path is answered 404, which marks the
+    // measurement invalid rather than measuring a half-loaded page.
+    case "/api/issue-views": return [];
+    case "/api/issue-view-preferences":
+      return { scope_type: "workspace", scope_id: null, prefs: { hidden: [], order: [] }, updated_at: "" };
+    case "/api/issue-workflows": return { workflows: [] };
+    case "/api/autopilots": return { autopilots: [], total: 0 };
+    case "/api/search-index/manifest":
+      return { cursor: "0", issue_count: 0, comment_count: 0, project_count: 0, text_bytes: 0 };
+    case "/api/search-index/snapshot":
+      return { issues: [], comments: [], projects: [], next_after_number: 0, done: true };
+    case "/api/search-index/changes":
+      return {
+        issues: [], comments: [], projects: [],
+        deleted: { issues: [], comments: [], projects: [] },
+        cursor: "0", has_more: false,
+      };
     case "/api/issue-statuses": return { statuses: [] };
     case "/api/properties": return { properties: [], total: 0 };
     case "/api/quick-actions": return { quick_actions: [] };
