@@ -58,10 +58,14 @@ describe("iOS scene lifecycle configuration", () => {
     const plugins = (config.plugins ?? []) as unknown[];
     const foldable = plugins.indexOf("./plugins/with-foldable-manifest");
     const ndk = plugins.indexOf("./plugins/with-android-ndk");
+    const signing = plugins.indexOf("./plugins/with-release-signing");
 
     expect(foldable).toBeGreaterThanOrEqual(0);
     expect(ndk).toBeGreaterThan(foldable);
-    expect(ndk).toBeLessThan(plugins.indexOf("expo-router"));
+    expect(signing).toBeGreaterThan(ndk);
+    // Every plugin that patches generated Gradle/manifest files must run before
+    // expo-router, which rewrites the manifest.
+    expect(signing).toBeLessThan(plugins.indexOf("expo-router"));
   });
 
   it.each([

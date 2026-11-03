@@ -32,3 +32,8 @@ data/**/.DS_Store
 
 expo-env.d.ts
 # @end expo-cli
+# Signing material never enters the repo. The upload key lives outside it;
+# path and passwords arrive via MULTICA_UPLOAD_* env vars (plugins/with-release-signing.js).
+*.jks
+*.keystore
+!android/app/debug.keystore

@@ -90,6 +90,9 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       // NDK 29: RN 0.86 pins NDK 27, whose libc++ lacks a symbol libfbjni
       // needs at startup. See plugins/with-android-ndk.js.
       "./plugins/with-android-ndk",
+      // Real upload key instead of the debug key; credentials come from
+      // MULTICA_UPLOAD_* env vars. See plugins/with-release-signing.js.
+      "./plugins/with-release-signing",
       "expo-router",
       "expo-image",
       "expo-localization",

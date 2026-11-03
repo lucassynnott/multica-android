@@ -169,6 +169,9 @@ A few notes that cost real time and are written down in the app so they are not 
 
 ## Run it
 
+Grab the signed APK from [Releases](../../releases/latest) if you just want to install it, or build it
+yourself:
+
 ```bash
 # prerequisites: Node 20+, pnpm 10+, JDK 21, Android SDK 36, NDK 29.0.14206865
 pnpm install
@@ -181,6 +184,30 @@ pnpm android
 cd apps/mobile/android
 ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a,x86_64
 ```
+
+### Signing
+
+Release builds are signed with a real upload key, not the debug key. The certificate lives outside the
+repo and reaches Gradle through the environment — `apps/mobile/plugins/with-release-signing.js` rewrites
+`app/build.gradle` during `expo prebuild`, so the wiring survives a clean native regeneration:
+
+```bash
+export MULTICA_UPLOAD_STORE_FILE=/path/to/upload-keystore.jks
+export MULTICA_UPLOAD_STORE_PASSWORD=…        # from your password manager
+export MULTICA_UPLOAD_KEY_ALIAS=multica-upload
+export MULTICA_UPLOAD_KEY_PASSWORD=…
+./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a,x86_64
+```
+
+With those unset the release buildType falls back to the debug key, so the build still works on a
+machine that does not hold the key. Verify what you built:
+
+```bash
+apksigner verify --print-certs app/build/outputs/apk/release/app-release.apk
+```
+
+Because the certificate is not the debug one, an APK from an earlier debug-signed run has to be
+uninstalled before this one installs over it. Subsequent releases update in place.
 
 Point the app at a server with `EXPO_PUBLIC_API_URL` (see `apps/mobile/.env.example`), then sign in with
 the email code — or, in development, set `EXPO_PUBLIC_DEV_AUTH_TOKEN` to a personal access token from
@@ -213,7 +240,9 @@ Not yet verified, and worth saying plainly:
 - **Drag-and-drop is a long-press move sheet**, not a finger drag across columns. It is reachable with
   TalkBack and a trackpad, which a drag gesture would not be, but it is not the interaction you expect
   from a board.
-- **The APKs built here are debug-key signed.** Fine for sideloading, not for distribution.
+- **Signed with a local upload key, not Play App Signing.** The APK verifies and installs, and updates
+  in place, but nobody has run it through the Play Console — which is also why the application id is
+  still the `.dev` variant.
 - **Issue lists cap at 100 rows** without a "showing 100 of N" notice yet.
 
 ---
@@ -225,7 +254,7 @@ apps/mobile/                 the Android app (Expo, expo-router, NativeWind)
   app/(app)/[workspace]/     workspace routes: inbox, board, projects, chat, issues, settings
   components/nav/            the hand-built tab bar / rail
   components/board/          shared board canvas, cards, move hook
-  plugins/                   config plugins: foldable manifest, NDK pin
+  plugins/                   config plugins: foldable manifest, NDK pin, release signing
   ANDROID.md                 build requirements, quirks, known non-fatal warnings
 apps/web, apps/desktop       the rest of the Multica monorepo this app shares contracts with
 packages/                    shared core, views and UI primitives
