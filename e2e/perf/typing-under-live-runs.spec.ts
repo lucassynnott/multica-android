@@ -126,6 +126,11 @@ function responseFor(pathname: string): unknown | undefined {
     case `/api/issues/${fx.ISSUE_ID}/comments/trigger-preview`:
       return { agents: [], blocked: [] };
     case "/api/issues/child-progress": return { progress: [] };
+    case "/api/issues/unread": return { items: [], next_cursor: null };
+    case "/api/labels": return { labels: [], total: 0 };
+    case "/api/inbox/archived/page":
+      // has_more must agree with next_cursor (schema refine).
+      return { items: [], next_cursor: null, has_more: false };
     case `/api/issues/${fx.ISSUE_IDENTIFIER}`:
     case `/api/issues/${fx.ISSUE_ID}`: return issue;
     case `/api/issues/${fx.ISSUE_ID}/timeline`: return fx.buildTimelineEntries();
@@ -133,6 +138,8 @@ function responseFor(pathname: string): unknown | undefined {
     case `/api/issues/${fx.ISSUE_ID}/subscribers`:
     case `/api/issues/${fx.ISSUE_ID}/wakeups`:
     case `/api/issues/${fx.ISSUE_ID}/attachments`: return [];
+    case `/api/issues/${fx.ISSUE_ID}/system-wakeups`: return [];
+    case `/api/issues/${fx.ISSUE_ID}/duplicates`: return { duplicate_of: null, duplicates: [] };
     case `/api/issues/${fx.ISSUE_ID}/labels`: return { labels: [] };
     case `/api/issues/${fx.ISSUE_ID}/children`: return { issues: [] };
     case `/api/issues/${fx.ISSUE_ID}/pull-requests`: return { pull_requests: [] };
