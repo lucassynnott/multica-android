@@ -35,7 +35,15 @@ interface NewIssueDraftState {
   assignee: AssigneeValue;
   dueDate: string | null;
   project: Project | null;
+  /**
+   * True while `status` is the one a board column's "+" preset, so the form
+   * can say why the issue is not starting in the default status. Cleared as
+   * soon as the user picks a different status themselves.
+   */
+  statusPreset: boolean;
   setStatus: (next: IssueStatus) => void;
+  /** Preset the status from a board column (`useBoardActions.onAddIssue`). */
+  presetStatus: (next: IssueStatus) => void;
   setPriority: (next: IssuePriority) => void;
   setAssignee: (next: AssigneeValue) => void;
   setDueDate: (next: string | null) => void;
@@ -45,18 +53,24 @@ interface NewIssueDraftState {
 
 const INITIAL: Pick<
   NewIssueDraftState,
-  "status" | "priority" | "assignee" | "dueDate" | "project"
+  "status" | "priority" | "assignee" | "dueDate" | "project" | "statusPreset"
 > = {
   status: "todo",
   priority: "none",
   assignee: null,
   dueDate: null,
   project: null,
+  statusPreset: false,
 };
 
 export const useNewIssueDraftStore = create<NewIssueDraftState>((set) => ({
   ...INITIAL,
-  setStatus: (next) => set({ status: next }),
+  setStatus: (next) =>
+    set((s) => ({
+      status: next,
+      statusPreset: s.statusPreset && s.status === next,
+    })),
+  presetStatus: (next) => set({ status: next, statusPreset: true }),
   setPriority: (next) => set({ priority: next }),
   setAssignee: (next) => set({ assignee: next }),
   setDueDate: (next) => set({ dueDate: next }),

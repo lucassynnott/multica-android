@@ -26,18 +26,25 @@ import { useT } from "@/lib/i18n";
 interface Options {
   columns: BoardColumnModel[];
   wsSlug: string | null;
+  /**
+   * Opens the issue in a detail pane beside the board and returns true, or
+   * returns false when there is no pane (then the issue screen is pushed).
+   * Only the workspace board's list view on a wide window passes it.
+   */
+  selectInPane?: (issue: Issue) => boolean;
 }
 
-export function useBoardActions({ columns, wsSlug }: Options) {
+export function useBoardActions({ columns, wsSlug, selectInPane }: Options) {
   const { t } = useT("issues");
   const moveIssue = useMoveIssue();
 
   const openIssue = useCallback(
     (issue: Issue) => {
       if (!wsSlug) return;
+      if (selectInPane?.(issue)) return;
       router.push(`/${wsSlug}/issue/${issue.id}`);
     },
-    [wsSlug],
+    [wsSlug, selectInPane],
   );
 
   const moveTo = useCallback(
@@ -168,7 +175,7 @@ export function useBoardActions({ columns, wsSlug }: Options) {
       // The new-issue screen reads its defaults from the draft store; setting
       // the status before pushing makes "+" on a column create straight into
       // that column.
-      useNewIssueDraftStore.getState().setStatus(status);
+      useNewIssueDraftStore.getState().presetStatus(status);
       router.push(`/${wsSlug}/new-issue`);
     },
     [wsSlug],

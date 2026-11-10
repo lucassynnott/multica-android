@@ -102,7 +102,8 @@
     "title": "聊天",
     "empty": "還沒有聊天。",
     "archived": "已歸檔",
-    "new_chat": "新建聊天"
+    "new_chat": "新建聊天",
+    "delete_a11y": "刪除聊天 {{title}}"
   },
   "picker.title": "選擇 AI 代理",
   "no_response": "本輪已結束，AI 代理沒有返回文字回覆。",
@@ -166,5 +167,16 @@
   "elapsed.failed": "執行 {{time}} 後失敗",
   "alerts.no_permission_message": "你已無權執行該 AI 代理，訊息未傳送。請聯絡該 AI 代理的所有者申請權限。",
   "failure.runtime_access_denied": "訊息未傳送：{{detail}}",
-  "banners.no_agent_action": "在 \"更多 → AI 代理\" 中新增或啟用 AI 代理即可開始聊天。"
+  "banners.no_agent_action": "在 \"更多 → AI 代理\" 中新增或啟用 AI 代理即可開始聊天。",
+  "no_agents": {
+    "title": "聊天需要一個 AI 代理",
+    "body": "AI 代理會在這裡回覆你，並處理你指派給它們的事項。這個工作區還沒有你可以使用的 AI 代理。",
+    "step_runtime_title": "連線執行時",
+    "step_runtime_body": "在一台保持開機的電腦上執行 Multica 守護行程。",
+    "step_agent_title": "建立 AI 代理",
+    "step_agent_body": "將它繫結到該執行時，它才能執行。",
+    "step_return_title": "回到這裡",
+    "step_return_body": "你的 AI 代理就可以開始聊天了。",
+    "open_agents": "開啟 AI 代理"
+  }
 }

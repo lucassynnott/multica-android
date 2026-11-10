@@ -76,10 +76,10 @@ export default function PinsPage() {
     );
   }
 
-  if (error) {
+  if (error && !data) {
     return (
-      <View className="flex-1 bg-background px-4 pt-4 gap-3">
-        <Text className="text-sm text-destructive">
+      <View className="flex-1 bg-background px-5 pt-5 gap-3">
+        <Text className="text-[13px] text-destructive">
           {t("pins.errors.load_failed", {
             message: error instanceof Error ? error.message : "unknown",
           })}
@@ -94,7 +94,7 @@ export default function PinsPage() {
   if (pins.length === 0) {
     return (
       <View className="flex-1 items-center justify-center bg-background px-8">
-        <Text className="text-sm text-muted-foreground text-center leading-[19px]">
+        <Text className="text-[15px] leading-[21px] text-muted-foreground text-center">
           {t("pins.empty")}
         </Text>
       </View>
@@ -115,7 +115,7 @@ export default function PinsPage() {
     >
       {pins.map((pin, idx) => (
         <View key={pin.id}>
-          {idx > 0 ? <View className="h-px bg-border ml-4" /> : null}
+          {idx > 0 ? <View className="h-px bg-border" /> : null}
           <PinRow pin={pin} wsId={wsId} wsSlug={wsSlug} />
         </View>
       ))}
@@ -198,7 +198,7 @@ function ProjectPinRow({
 
 function SkeletonRow() {
   return (
-    <View className="px-4 py-3 flex-row items-center gap-3">
+    <View className="min-h-[52px] px-5 py-2.5 flex-row items-center gap-3">
       <View className="flex-1 gap-1.5">
         <Skeleton className="h-3.5 w-3/4" />
         <Skeleton className="h-3 w-24" />
@@ -227,7 +227,7 @@ function MissingPinRow({
   return (
     <Pressable
       onPress={() => deletePin.mutate({ itemType, itemId })}
-      className="px-4 py-3 flex-row items-center gap-3 active:bg-secondary"
+      className="min-h-[52px] px-5 py-2.5 flex-row items-center gap-3 active:bg-secondary"
       accessibilityLabel={
         itemType === "issue"
           ? t("pins.unavailable_issue")
@@ -240,7 +240,7 @@ function MissingPinRow({
         color={THEME[colorScheme].mutedForeground}
       />
       <Text
-        className="flex-1 text-sm font-medium text-muted-foreground leading-[19px]"
+        className="flex-1 text-[15px] leading-[21px] text-muted-foreground"
         numberOfLines={1}
       >
         {itemType === "issue"

@@ -6,9 +6,8 @@
  * the route renders a tiny header with action buttons.
  */
 import { useRef } from "react";
-import { View } from "react-native";
+import { Pressable, View } from "react-native";
 import { router } from "expo-router";
-import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
 import {
   DueDatePickerBody,
@@ -25,33 +24,38 @@ export default function NewIssueDueDatePickerRoute() {
 
   return (
     <View className="flex-1">
-      <View className="flex-row items-center justify-between px-4 pb-2 pt-4">
-        <Text className="text-base font-semibold text-foreground">
+      <View className="flex-row items-center justify-between pb-2 pl-5 pr-3 pt-3">
+        <Text className="text-xl font-semibold text-foreground">
           {t("common:fields.due_date")}
         </Text>
-        <View className="flex-row items-center gap-2">
+        <View className="flex-row items-center gap-1">
           {dueDate ? (
-            <Button
-              variant="ghost"
-              size="sm"
+            <Pressable
               onPress={() => {
                 setDueDate(null);
                 router.back();
               }}
+              accessibilityRole="button"
+              className="h-11 justify-center rounded-lg px-3 active:bg-secondary"
             >
-              <Text className="text-destructive">{t("picker.clear")}</Text>
-            </Button>
+              <Text className="text-[15px] text-destructive">
+                {t("picker.clear")}
+              </Text>
+            </Pressable>
           ) : null}
-          <Button
-            size="sm"
+          <Pressable
             onPress={() => {
               const iso = ref.current?.getIso();
               if (iso) setDueDate(iso);
               router.back();
             }}
+            accessibilityRole="button"
+            className="h-10 justify-center rounded-lg bg-primary px-4 active:opacity-80"
           >
-            <Text>{t("common:actions.done")}</Text>
-          </Button>
+            <Text className="text-[15px] font-semibold text-primary-foreground">
+              {t("common:actions.done")}
+            </Text>
+          </Pressable>
         </View>
       </View>
       <DueDatePickerBody ref={ref} value={dueDate} />

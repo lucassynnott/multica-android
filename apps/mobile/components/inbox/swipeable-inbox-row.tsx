@@ -1,8 +1,9 @@
 /**
  * Left-swipe-to-reveal-Archive wrapper for inbox rows.
  *
- * iOS pattern reference: Mail.app / Linear iOS / Things — a destructive
- * red Archive action revealed by a leftward drag. **Reveal-only, no
+ * iOS pattern reference: Mail.app / Linear iOS / Things — an Archive action
+ * revealed by a leftward drag. It is a quiet `bg-secondary` tile, not a red
+ * one: archiving is reversible, and vermilion is kept for unread and urgent. **Reveal-only, no
  * auto-fire**: the previous version archived on full swipe past threshold,
  * which felt aggressive (no peek, easy to trigger by accident on a fast
  * vertical scroll). Mail.app / Linear require an explicit tap on the
@@ -43,6 +44,8 @@ import type { InboxItem } from "@multica/core/types";
 import { Text } from "@/components/ui/text";
 import { InboxRow } from "./inbox-row";
 import { useT } from "@/lib/i18n";
+import { useColorScheme } from "@/lib/use-color-scheme";
+import { THEME } from "@/lib/theme";
 
 const ACTION_WIDTH = 80;
 
@@ -50,9 +53,16 @@ interface Props {
   item: InboxItem;
   onPress: () => void;
   onArchive: () => void;
+  /** The row's issue is open in the detail pane beside the list. */
+  selected?: boolean;
 }
 
-export function SwipeableInboxRow({ item, onPress, onArchive }: Props) {
+export function SwipeableInboxRow({
+  item,
+  onPress,
+  onArchive,
+  selected,
+}: Props) {
   const ref = useRef<SwipeableMethods>(null);
 
   const fireArchive = () => {
@@ -71,7 +81,7 @@ export function SwipeableInboxRow({ item, onPress, onArchive }: Props) {
         <ArchiveAction onPress={fireArchive} drag={drag} />
       )}
     >
-      <InboxRow item={item} onPress={onPress} />
+      <InboxRow item={item} onPress={onPress} selected={selected} />
     </ReanimatedSwipeable>
   );
 }
@@ -84,6 +94,7 @@ function ArchiveAction({
   drag: SharedValue<number>;
 }) {
   const { t } = useT("inbox");
+  const { colorScheme } = useColorScheme();
   // One-shot haptic when the drag crosses the action width threshold.
   // useAnimatedReaction runs on the UI thread; runOnJS bridges to the
   // Haptics.impactAsync call which has to live on JS.
@@ -101,12 +112,19 @@ function ArchiveAction({
     <Animated.View style={{ width: ACTION_WIDTH }}>
       <Pressable
         onPress={onPress}
+        accessibilityRole="button"
         accessibilityLabel={t("actions.archive")}
-        className="flex-1 items-center justify-center bg-destructive"
+        className="flex-1 items-center justify-center border-b border-border bg-secondary"
       >
-        <View className="items-center gap-0.5">
-          <Ionicons name="archive-outline" size={20} color="white" />
-          <Text className="text-xs text-white">{t("actions.archive")}</Text>
+        <View className="items-center gap-1">
+          <Ionicons
+            name="archive-outline"
+            size={20}
+            color={THEME[colorScheme].foreground}
+          />
+          <Text className="text-xs text-foreground">
+            {t("actions.archive")}
+          </Text>
         </View>
       </Pressable>
     </Animated.View>

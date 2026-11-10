@@ -3,7 +3,10 @@
 @tailwind utilities;
 
 /*
- * Theme tokens — RNR template (verbatim) + Multica custom tokens appended.
+ * Theme tokens — "Graphite": chroma-free neutrals with a single vermilion
+ * accent (`primary` / `brand`) for primary actions, selection and urgency.
+ * Dark is the designed theme; light keeps the neutral ladder it had and
+ * takes a darker vermilion so white text on it stays above 4.5:1.
  *
  * When changing any variable here, also update apps/mobile/lib/theme.ts —
  * they mirror each other. See apps/mobile/AGENTS.md, "Theming model".
@@ -17,8 +20,8 @@
     --card-foreground: 0 0% 3.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 3.9%;
-    --primary: 0 0% 9%;
-    --primary-foreground: 0 0% 98%;
+    --primary: 11 82% 45%;
+    --primary-foreground: 0 0% 100%;
     --secondary: 0 0% 96.1%;
     --secondary-foreground: 0 0% 9%;
     --muted: 0 0% 96.1%;
@@ -34,7 +37,7 @@
      * adjacent surface" guidance. */
     --border: 0 0% 89.8%;
     --input: 0 0% 89.8%;
-    --ring: 0 0% 70.8%;
+    --ring: 11 82% 45%;
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
     --chart-3: 197 37% 24%;
@@ -42,8 +45,8 @@
     --chart-5: 27 87% 67%;
 
     /* Multica custom tokens */
-    --brand: 225 71% 58%;
-    --brand-foreground: 0 0% 98%;
+    --brand: 11 82% 45%;
+    --brand-foreground: 0 0% 100%;
     --success: 142 71% 45%;
     --warning: 48 89% 47%;
     --info: 217 91% 60%;
@@ -80,27 +83,27 @@
 
   .dark:root {
     --background: 0 0% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 9%;
-    --secondary: 0 0% 14.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 0 0% 14.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 70.9% 59.4%;
+    --foreground: 0 0% 92%;
+    --card: 0 0% 7.5%;
+    --card-foreground: 0 0% 92%;
+    --popover: 0 0% 7.5%;
+    --popover-foreground: 0 0% 92%;
+    --primary: 11 87% 62%;
+    --primary-foreground: 12 56% 7%;
+    --secondary: 0 0% 12%;
+    --secondary-foreground: 0 0% 92%;
+    --muted: 0 0% 12%;
+    --muted-foreground: 0 0% 65%;
+    --accent: 0 0% 12%;
+    --accent-foreground: 0 0% 92%;
+    --destructive: 11 100% 72%;
     --destructive-foreground: 0 0% 98%;
     /* Border at L 25% — mirrors the light-mode logic: 6% lighter than
      * surface-2 (the topmost elevated tier), 21% lighter than page (3.9%).
      * Visible across every tier of the dark elevation scale. */
-    --border: 0 0% 25%;
-    --input: 0 0% 25%;
-    --ring: 300 0% 45%;
+    --border: 0 0% 14.5%;
+    --input: 0 0% 17%;
+    --ring: 11 87% 62%;
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;
@@ -108,8 +111,8 @@
     --chart-5: 340 75% 55%;
 
     /* Multica custom tokens — dark mirrors light until a screen demands tuning */
-    --brand: 225 71% 58%;
-    --brand-foreground: 0 0% 98%;
+    --brand: 11 87% 62%;
+    --brand-foreground: 12 56% 7%;
     --success: 142 71% 45%;
     --warning: 48 89% 47%;
     --info: 217 91% 60%;
@@ -117,7 +120,7 @@
     /* code-surface is the ONE exception that needs a real dark value —
      * the light value (240 4% 92%) is near-white and would render code
      * blocks with a brighter background than the page in dark mode. */
-    --code-surface: 240 4% 18%;
+    --code-surface: 0 0% 7.5%;
 
     /* Dark elevation scale — mirrors the light scale but lightness
      * INCREASES with elevation (shadows don't read on dark, so tonal
@@ -131,7 +134,7 @@
      *   L 19     surface-2   nested in surface-1     (code/table inside bubble)
      *   L 25     border                              (visible across all tiers)
      */
-    --surface-1: 0 0% 8%;
-    --surface-2: 0 0% 19%;
+    --surface-1: 0 0% 7.5%;
+    --surface-2: 0 0% 16%;
   }
 }

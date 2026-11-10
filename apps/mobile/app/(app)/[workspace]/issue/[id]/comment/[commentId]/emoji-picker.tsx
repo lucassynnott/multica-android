@@ -21,7 +21,8 @@ import { useLocalSearchParams, router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { EmojiKeyboard, type EmojiType } from "rn-emoji-keyboard";
 import type { Reaction } from "@multica/core/types";
-import { Text } from "@/components/ui/text";
+import { PickerTitle } from "@/components/ui/picker-row";
+import { useT } from "@/lib/i18n";
 import { issueTimelineOptions } from "@/data/queries/issues";
 import { useToggleCommentReaction } from "@/data/mutations/issues";
 import { useAuthStore } from "@/data/auth-store";
@@ -38,6 +39,7 @@ export default function CommentEmojiPickerRoute() {
   const userId = useAuthStore((s) => s.user?.id);
   const toggle = useToggleCommentReaction(id);
   const { colorScheme } = useColorScheme();
+  const { t } = useT("issues");
 
   const { data: timeline = [] } = useQuery(issueTimelineOptions(wsId, id));
   const entry = useMemo(
@@ -68,11 +70,7 @@ export default function CommentEmojiPickerRoute() {
 
   return (
     <View className="flex-1">
-      <View className="px-4 pb-2 pt-4">
-        <Text className="text-base font-semibold text-foreground">
-          Add Reaction
-        </Text>
-      </View>
+      <PickerTitle>{t("comments.add_reaction")}</PickerTitle>
       <View className="flex-1">
         <EmojiKeyboard
           onEmojiSelected={onSelect}
@@ -83,7 +81,7 @@ export default function CommentEmojiPickerRoute() {
             backdrop: theme.background,
             knob: theme.mutedForeground,
             container: theme.popover,
-            header: theme.foreground,
+            header: theme.mutedForeground,
             skinTonesContainer: theme.secondary,
             category: {
               icon: theme.mutedForeground,

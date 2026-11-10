@@ -12,9 +12,8 @@
  * pull-to-refresh is only for the cellular-edge case where a reconnect missed
  * events.
  *
- * Layout: one card per project on the page inset (16), 12 between cards. The
- * cards carry their own border, so the old per-row hairlines are gone — a
- * separator between two bordered cards would be a third edge.
+ * Layout: hairline-separated rows on the 20dp gutter. Loading, empty and
+ * error states only replace the list when there is no data to show.
  */
 import { useCallback, useMemo } from "react";
 import {
@@ -68,29 +67,20 @@ export function ProjectsList() {
     );
   }
 
-  if (error) {
+  if (error && !data) {
     return (
-      <View className="px-4 pt-6 gap-3">
-        <Text className="text-[13px] text-destructive">
+      <View className="gap-3 px-5 pt-6">
+        <Text className="text-[15px] leading-[21px] text-foreground">
           {t("errors.load_failed", {
             message: error instanceof Error ? error.message : "unknown",
           })}
         </Text>
-        <Button variant="outline" onPress={() => refetch()}>
+        <Button
+          variant="outline"
+          className="min-h-11 self-start"
+          onPress={() => refetch()}
+        >
           <Text>{t("common:actions.retry")}</Text>
-        </Button>
-      </View>
-    );
-  }
-
-  if (sorted.length === 0) {
-    return (
-      <View className="flex-1 items-center justify-center px-8 gap-4">
-        <Text className="text-[13px] text-muted-foreground text-center">
-          {t("list.empty")}
-        </Text>
-        <Button variant="outline" onPress={goCreate}>
-          <Text>{t("common:actions.create")}</Text>
         </Button>
       </View>
     );
@@ -100,19 +90,21 @@ export function ProjectsList() {
     <FlatList
       data={sorted}
       keyExtractor={(item) => item.id}
-      contentContainerStyle={{
-        paddingHorizontal: 16,
-        paddingTop: 12,
-        paddingBottom: 24,
-      }}
-      ItemSeparatorComponent={() => <View className="h-3" />}
+      contentContainerStyle={{ flexGrow: 1, paddingBottom: 24 }}
+      ItemSeparatorComponent={() => <View className="h-px bg-border" />}
       renderItem={({ item }) => (
-        <ProjectRow
-          variant="card"
-          project={item}
-          onPress={() => openProject(item.id)}
-        />
+        <ProjectRow project={item} onPress={() => openProject(item.id)} />
       )}
+      ListEmptyComponent={
+        <View className="gap-3 px-5 pt-6">
+          <Text className="text-[15px] leading-[21px] text-muted-foreground">
+            {t("list.empty")}
+          </Text>
+          <Button className="min-h-11 self-start" onPress={goCreate}>
+            <Text>{t("common:actions.create")}</Text>
+          </Button>
+        </View>
+      }
       refreshControl={
         <RefreshControl refreshing={isRefetching} onRefresh={refetch} />
       }

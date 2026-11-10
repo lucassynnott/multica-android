@@ -2,40 +2,25 @@
  * Project entry, shared by the Projects tab, the Projects entry under More and
  * the Pins list.
  *
- * Content is the same everywhere: name, description, completion bar, and a
- * footer carrying the two numbers a project is judged by — how much is done and
- * how much is still open. Status and priority are Badges rather than icon+text
- * pairs, so a column of projects scans as one column of state instead of four
- * different glyph scales. The previous row's status, priority and done/total
- * are all still here; ordering still comes from the caller.
+ * A list row, not a card (DESIGN.md "Lists, not cards"): icon, name at 15, one
+ * 13 muted line with the status and how much is done, a 2dp completion bar,
+ * and the priority as trailing 12 meta — vermilion and 600 only when urgent.
+ * Ordering still comes from the caller.
  *
- * Two surfaces, because the two host lists differ:
- *   - `card` (Projects lists) — its own border on the page inset, no separators.
- *   - `row` (Pins, a separator-driven list) — full-bleed with the row inset, so
- *     a card border never sits inside a hairline list.
+ * `card` is kept for a host that has no separators of its own: the same
+ * content inside one bordered panel.
  */
 import { Pressable, View } from "react-native";
-import type { Project, ProjectStatus } from "@multica/core/types";
+import type { Project } from "@multica/core/types";
 import { Text } from "@/components/ui/text";
-import { Badge, CountBadge } from "@/components/ui/badge";
 import { ProjectIcon } from "@/components/ui/project-icon";
-import { ProjectPriorityIcon } from "@/components/ui/project-priority-icon";
 import { ProjectProgress } from "@/components/project/project-progress";
 import {
   projectPriorityLabel,
   projectStatusLabel,
 } from "@/lib/project-status";
 import { useT } from "@/lib/i18n";
-
-type BadgeVariant = "outline" | "secondary" | "info" | "success" | "warning";
-
-const STATUS_VARIANT: Record<ProjectStatus, BadgeVariant> = {
-  planned: "outline",
-  in_progress: "info",
-  paused: "warning",
-  completed: "success",
-  cancelled: "outline",
-};
+import { cn } from "@/lib/utils";
 
 interface Props {
   project: Project;
@@ -48,66 +33,52 @@ export function ProjectRow({ project, onPress, variant = "row" }: Props) {
   const { t } = useT("projects");
   const total = project.issue_count;
   const done = project.done_count;
-  const open = Math.max(0, total - done);
-  const isCard = variant === "card";
+  const urgent = project.priority === "urgent";
+  const status = projectStatusLabel(project.status);
 
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={project.title}
-      className={`gap-3 active:bg-secondary ${
-        isCard
-          ? "rounded-xl border border-border bg-card p-4"
-          : "px-4 py-3"
-      }`}
+      className={cn(
+        "min-h-11 flex-row items-start gap-3 active:bg-secondary",
+        variant === "card"
+          ? "rounded-lg border border-border bg-card p-4"
+          : "px-5 py-3",
+      )}
     >
-      <View className="flex-row items-start gap-3">
-        <ProjectIcon icon={project.icon} size="lg" />
-        <View className="flex-1 gap-1">
-          <Text
-            className="text-[14px] font-semibold text-foreground"
-            numberOfLines={2}
-          >
-            {project.title}
-          </Text>
-          {project.description ? (
-            <Text
-              className="text-[12px] leading-4 text-muted-foreground"
-              numberOfLines={2}
-            >
-              {project.description}
-            </Text>
-          ) : null}
-        </View>
-        <Badge
-          variant={STATUS_VARIANT[project.status]}
-          label={projectStatusLabel(project.status)}
-        />
+      <View className="h-[21px] justify-center">
+        <ProjectIcon icon={project.icon} size="sm" />
       </View>
-
-      {total > 0 ? <ProjectProgress done={done} total={total} /> : null}
-
-      {total > 0 || project.priority !== "none" ? (
-        <View className="flex-row items-center gap-2">
-          {total > 0 ? (
-            <Text
-              className="flex-1 text-[12px] text-muted-foreground tabular-nums"
-              numberOfLines={1}
-            >
-              {t("list.issues_done", { done, total })}
-            </Text>
-          ) : (
-            <View className="flex-1" />
+      <View className="min-w-0 flex-1 gap-1">
+        <Text
+          className="text-[15px] leading-[21px] text-foreground"
+          numberOfLines={2}
+        >
+          {project.title}
+        </Text>
+        <Text className="text-[13px] text-muted-foreground" numberOfLines={1}>
+          {total > 0
+            ? `${status} · ${t("list.issues_done", { done, total })}`
+            : status}
+        </Text>
+        {total > 0 ? (
+          <View className="pt-1">
+            <ProjectProgress done={done} total={total} />
+          </View>
+        ) : null}
+      </View>
+      {project.priority !== "none" ? (
+        <Text
+          className={cn(
+            "shrink-0 text-xs leading-[21px]",
+            urgent ? "font-semibold text-primary" : "text-muted-foreground",
           )}
-          {project.priority !== "none" ? (
-            <Badge variant="outline" className="gap-1">
-              <ProjectPriorityIcon priority={project.priority} size={11} />
-              <Badge.Text>{projectPriorityLabel(project.priority)}</Badge.Text>
-            </Badge>
-          ) : null}
-          {total > 0 ? <CountBadge value={open} /> : null}
-        </View>
+          numberOfLines={1}
+        >
+          {projectPriorityLabel(project.priority)}
+        </Text>
       ) : null}
     </Pressable>
   );

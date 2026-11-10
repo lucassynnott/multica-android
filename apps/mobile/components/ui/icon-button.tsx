@@ -1,11 +1,12 @@
 /**
  * Icon-only button — RNR `<Button variant="ghost" size="icon">` wrapping an
- * Ionicon. The icon color falls back to the active navigation theme's
+ * Ionicon. The box is 48dp (the `icon` size) with no fill: Graphite keeps
+ * chrome quiet, and only a screen's one primary action gets a filled tile. The icon color falls back to the active navigation theme's
  * foreground (via `useTheme()`), so dark mode flips automatically without
  * anyone passing a color prop.
  *
  * Use everywhere we'd otherwise hand-write
- *   <Pressable className="size-9 active:bg-secondary"><Ionicons color="#3f3f46" /></Pressable>
+ *   <Pressable className="size-9 active:bg-secondary"><Ionicons color={literal} /></Pressable>
  * — that pattern hardcodes a light-mode hex and reinvents button chrome RNR
  * already ships.
  */

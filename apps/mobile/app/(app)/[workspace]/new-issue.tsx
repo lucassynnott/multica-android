@@ -20,20 +20,28 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  TextInput,
+  View,
 } from "react-native";
-import { Stack, router } from "expo-router";
+import { Stack } from "expo-router";
 import { SubmitIssueButton } from "@/components/issue/submit-issue-button";
 import { CreateFormAttributeRow } from "@/components/issue/create-form-attribute-row";
 import { MentionSuggestionBar } from "@/components/issue/mention-suggestion-bar";
 import { DescriptionField } from "@/components/issue/description-field";
-import { TextField } from "@/components/ui/text-field";
+import { TideTexture } from "@/components/ui/tide-texture";
 import { useCreateIssue } from "@/data/mutations/issues";
 import { useNewIssueDraftStore } from "@/data/stores/new-issue-draft-store";
+import { Text } from "@/components/ui/text";
+import { useIssueStatuses } from "@/lib/use-issue-statuses";
 import { useMentionInput } from "@/lib/use-mention-input";
 import { useT } from "@/lib/i18n";
+import { useDiscardGuard } from "@/lib/use-discard-guard";
+import { THEME } from "@/lib/theme";
+import { useColorScheme } from "@/lib/use-color-scheme";
 
 export default function NewIssueModal() {
   const { t } = useT("issues");
+  const { colorScheme } = useColorScheme();
   const [title, setTitle] = useState("");
   const description = useMentionInput();
   // Attribute chips (status / priority / assignee / due date / project)
@@ -46,10 +54,14 @@ export default function NewIssueModal() {
   const assignee = useNewIssueDraftStore((s) => s.assignee);
   const dueDate = useNewIssueDraftStore((s) => s.dueDate);
   const project = useNewIssueDraftStore((s) => s.project);
+  const statusPreset = useNewIssueDraftStore((s) => s.statusPreset);
   const resetDraft = useNewIssueDraftStore((s) => s.reset);
+  const { labelOf } = useIssueStatuses();
 
+  // Reset on unmount only. Resetting on mount as well wiped the status the
+  // board's column "+" stores just before pushing this screen, so an issue
+  // added from the "In Review" column was created in the default status.
   useEffect(() => {
-    resetDraft();
     return () => {
       resetDraft();
     };
@@ -59,6 +71,17 @@ export default function NewIssueModal() {
   const isSubmitting = createIssue.isPending;
 
   const canSubmit = !isSubmitting && title.trim().length > 0;
+
+  const leave = useDiscardGuard(
+    !createIssue.isSuccess &&
+      (title.trim().length > 0 || description.text.trim().length > 0),
+    {
+      title: t("form.discard_title"),
+      message: t("form.discard_message_new_issue"),
+      keep: t("form.keep_editing"),
+      discard: t("common:actions.discard"),
+    },
+  );
 
   const onSubmit = useCallback(async () => {
     const trimmedTitle = title.trim();
@@ -76,7 +99,7 @@ export default function NewIssueModal() {
         ...(dueDate ? { due_date: dueDate } : {}),
         ...(project ? { project_id: project.id } : {}),
       });
-      router.back();
+      leave();
     } catch (err) {
       Alert.alert(
         t("errors.create_failed"),
@@ -92,6 +115,7 @@ export default function NewIssueModal() {
     dueDate,
     project,
     createIssue,
+    leave,
     t,
   ]);
 
@@ -107,22 +131,28 @@ export default function NewIssueModal() {
   );
 
   return (
-    <>
+    <View className="flex-1 bg-background">
+      <TideTexture height={300} />
       <Stack.Screen options={{ headerRight }} />
       <KeyboardAvoidingView
-        className="flex-1 bg-background"
+        className="flex-1"
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         <ScrollView
           className="flex-1"
-          contentContainerClassName="px-4 pt-5 pb-6 gap-4"
+          contentContainerClassName="px-5 pt-4 pb-6 gap-1"
           keyboardShouldPersistTaps="handled"
         >
-          <TextField
+          <TextInput
             value={title}
             onChangeText={setTitle}
             placeholder={t("new.title_placeholder")}
-            className="h-9 font-medium"
+            placeholderTextColor={THEME[colorScheme].mutedForeground}
+            accessibilityLabel={t("common:fields.title")}
+            // Size is inline, not a `text-*` class: NativeWind adds a
+            // lineHeight with those, which clips descenders in a TextInput.
+            style={{ fontSize: 22 }}
+            className="min-h-12 p-0 font-sans font-semibold text-foreground"
             autoFocus
             returnKeyType="next"
             editable={!isSubmitting}
@@ -132,6 +162,11 @@ export default function NewIssueModal() {
             disabled={isSubmitting}
           />
           <CreateFormAttributeRow />
+          {statusPreset ? (
+            <Text className="mt-2 text-[13px] text-muted-foreground">
+              {t("new.status_preset_hint", { status: labelOf(status) })}
+            </Text>
+          ) : null}
         </ScrollView>
 
         {/* Mention suggestions float above the keyboard only when the user
@@ -139,6 +174,6 @@ export default function NewIssueModal() {
             doesn't take space at rest. */}
         <MentionSuggestionBar {...description.suggestionBar} />
       </KeyboardAvoidingView>
-    </>
+    </View>
   );
 }

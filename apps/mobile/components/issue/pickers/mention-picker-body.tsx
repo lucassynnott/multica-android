@@ -16,7 +16,7 @@
  *
  * Mobile is the iOS-native equivalent of shadcn's `CommandDialog` — search
  * input from the native UISearchController (registered by the parent
- * route via `useNativeSearchBar`), groups via 11px muted section labels,
+ * route via `useNativeSearchBar`), groups via 13/600 muted section labels,
  * empty state inline.
  */
 import { useEffect, useMemo, useState } from "react";
@@ -90,8 +90,10 @@ export function MentionPickerBody({ query, mode = "comment" }: Props) {
   );
   const listRef = useScrollToTopOnChange(query);
   const { colorScheme } = useColorScheme();
-  const checkColor =
-    colorScheme === "dark" ? THEME.dark.primary : THEME.light.primary;
+  const mutedColor =
+    colorScheme === "dark"
+      ? THEME.dark.mutedForeground
+      : THEME.light.mutedForeground;
 
   const selected = useMentionDraftStore((s) => s.mentions);
   const toggle = useMentionDraftStore((s) => s.toggle);
@@ -269,8 +271,8 @@ export function MentionPickerBody({ query, mode = "comment" }: Props) {
             }
             leading={
               item.kind === "all" ? (
-                <View className="h-7 w-7 items-center justify-center rounded-full bg-primary/10">
-                  <Ionicons name="people" size={16} color={checkColor} />
+                <View className="h-7 w-7 items-center justify-center rounded-lg border border-border bg-secondary">
+                  <Ionicons name="people" size={16} color={mutedColor} />
                 </View>
               ) : item.kind === "member" ? (
                 <ActorAvatar
@@ -296,8 +298,8 @@ export function MentionPickerBody({ query, mode = "comment" }: Props) {
         );
       }}
       ListEmptyComponent={
-        <View className="px-3 py-8 items-center">
-          <Text className="text-sm text-muted-foreground">
+        <View className="items-center px-5 py-8">
+          <Text className="text-[13px] text-muted-foreground">
             {t("picker.no_matches")}
           </Text>
         </View>

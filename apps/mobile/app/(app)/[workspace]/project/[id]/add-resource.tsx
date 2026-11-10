@@ -33,6 +33,7 @@ export default function AddResourceRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const createResource = useCreateProjectResource(id);
   const { t } = useT("issues");
+  const { t: tProjects } = useT("projects");
 
   const [url, setUrl] = useState("");
   const [ref, setRef] = useState("");
@@ -81,28 +82,32 @@ export default function AddResourceRoute() {
     );
   }, [valid, submitting, createResource, url, ref, label, t]);
 
+  const blocked = !valid || submitting;
+
   return (
     <View className="flex-1">
-      <View className="flex-row items-center justify-between px-4 pt-4 pb-2">
-        <Text className="text-base font-semibold text-foreground">
+      <View className="flex-row items-center justify-between gap-3 pb-2 pl-5 pr-4 pt-3">
+        <Text className="flex-1 text-xl font-semibold text-foreground">
           {t("resources.title")}
         </Text>
         <Pressable
           onPress={onSubmit}
-          disabled={!valid || submitting}
-          hitSlop={6}
-          className={`px-3 py-1.5 rounded-md ${
-            !valid || submitting ? "opacity-50" : "active:bg-secondary"
+          disabled={blocked}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: blocked }}
+          hitSlop={{ top: 4, bottom: 4 }}
+          className={`h-9 min-w-11 items-center justify-center rounded-lg bg-primary px-3.5 active:opacity-80 ${
+            blocked ? "opacity-40" : ""
           }`}
         >
-          <Text className="text-sm font-semibold text-primary">
+          <Text className="text-[15px] font-semibold text-primary-foreground">
             {submitting ? t("resources.attaching") : t("resources.attach")}
           </Text>
         </Pressable>
       </View>
-      <View className="px-4 pt-4 gap-4">
-        <View className="gap-1">
-          <Text className="text-xs text-muted-foreground">
+      <View className="gap-5 px-5 pt-3">
+        <View className="gap-2">
+          <Text className="text-[13px] font-semibold text-muted-foreground">
             {t("resources.url")}
           </Text>
           <TextField
@@ -115,8 +120,8 @@ export default function AddResourceRoute() {
             autoFocus
           />
         </View>
-        <View className="gap-1">
-          <Text className="text-xs text-muted-foreground">
+        <View className="gap-2">
+          <Text className="text-[13px] font-semibold text-muted-foreground">
             {t("resources.branch")}
           </Text>
           <TextField
@@ -125,21 +130,22 @@ export default function AddResourceRoute() {
             placeholder="main"
             autoCapitalize="none"
             autoCorrect={false}
+            invalid={refMessage !== null}
           />
           <Text
-            className={`text-xs ${refMessage === null ? "text-muted-foreground" : "text-destructive"}`}
+            className={`text-[13px] leading-[19px] ${refMessage === null ? "text-muted-foreground" : "text-destructive"}`}
           >
             {refMessage ?? t("resources.branch_hint")}
           </Text>
         </View>
-        <View className="gap-1">
-          <Text className="text-xs text-muted-foreground">
+        <View className="gap-2">
+          <Text className="text-[13px] font-semibold text-muted-foreground">
             {t("resources.label")}
           </Text>
           <TextField
             value={label}
             onChangeText={setLabel}
-            placeholder="e.g. Backend"
+            placeholder={tProjects("resources.label_placeholder")}
           />
         </View>
       </View>

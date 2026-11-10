@@ -70,18 +70,19 @@ export function ReactionBar({
         <Pressable
           key={g.emoji}
           onPress={() => onToggle(g.emoji)}
+          hitSlop={{ top: 8, bottom: 8, left: 2, right: 2 }}
           className={cn(
-            "flex-row items-center gap-1 rounded-full border px-2 py-0.5",
+            "h-7 flex-row items-center gap-1.5 rounded-lg border px-2",
             g.reacted
-              ? "border-brand/30 bg-brand/10"
-              : "border-border bg-background",
+              ? "border-primary/40 bg-primary/10"
+              : "border-border bg-card",
           )}
         >
-          <Text className="text-xs">{g.emoji}</Text>
+          <Text className="text-[13px]">{g.emoji}</Text>
           <Text
             className={cn(
-              "text-xs tabular-nums",
-              g.reacted ? "text-brand" : "text-muted-foreground",
+              "font-mono text-xs",
+              g.reacted ? "text-primary" : "text-muted-foreground",
             )}
           >
             {g.count}

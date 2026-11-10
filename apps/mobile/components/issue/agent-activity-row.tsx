@@ -10,6 +10,9 @@
  * This row is the "discovery" surface (visible only when timeline isn't
  * scrolled). The badge is the "ambient" surface (always visible during
  * active tasks). One route, two entry points.
+ *
+ * Graphite: a run is an object in its own right, so the row is a panel
+ * (`bg-card border border-border rounded-lg`) with mono text.
  */
 import { useMemo } from "react";
 import { Pressable, View } from "react-native";
@@ -70,7 +73,8 @@ export function AgentActivityRow({ issueId }: Props) {
           params: { workspace: wsSlug, id: issueId },
         });
       }}
-      className="mt-1 flex-row items-center gap-2 rounded-lg py-1.5 -mx-2 px-2 active:bg-secondary/60"
+      accessibilityRole="button"
+      className="mx-5 mb-3 min-h-11 flex-row items-center gap-2 rounded-lg border border-border bg-card px-3 active:bg-secondary"
     >
       {activeCount > 0 ? (
         <ActiveContent
@@ -91,9 +95,9 @@ function ActiveContent({ actors }: { actors: StackActor[] }) {
   const { t } = useT("projects");
   return (
     <View className="flex-1 flex-row items-center gap-2">
-      <AvatarStack actors={actors} max={3} size={20} />
+      <AvatarStack actors={actors} max={3} size={22} />
       <PulseDot />
-      <Text className="text-[13px] font-medium text-foreground">
+      <Text className="font-mono text-[13px] text-foreground">
         {t("runs.working")}
       </Text>
     </View>
@@ -104,8 +108,8 @@ function IdleContent({ count, mutedFg }: { count: number; mutedFg: string }) {
   const { t } = useT("projects");
   return (
     <View className="flex-1 flex-row items-center gap-2">
-      <Ionicons name="time-outline" size={14} color={mutedFg} />
-      <Text className="text-[13px] text-foreground">
+      <Ionicons name="time-outline" size={16} color={mutedFg} />
+      <Text className="font-mono text-[13px] text-muted-foreground">
         {t("runs.count", { count })}
       </Text>
     </View>

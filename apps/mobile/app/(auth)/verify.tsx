@@ -9,6 +9,8 @@ import { Text } from "@/components/ui/text";
 import { OtpInput, type OtpInputRef } from "@/components/ui/otp-input";
 import { Button } from "@/components/ui/button";
 import { MulticaLogo } from "@/components/brand/multica-logo";
+import { TideTexture } from "@/components/ui/tide-texture";
+import { ApiHost } from "@/components/auth/api-host";
 import { useAuthStore } from "@/data/auth-store";
 import { i18n, useT } from "@/lib/i18n";
 import { mapAuthError } from "@/lib/auth-error";
@@ -75,6 +77,7 @@ export default function Verify() {
 
   return (
     <SafeAreaView className="flex-1 bg-background">
+      <TideTexture height={560} opacity={0.11} />
       <KeyboardAwareScrollView
         // Same reason as login: on the cover geometry the six OTP boxes and the
         // Verify button sat underneath the keypad. This view scrolls the
@@ -86,7 +89,7 @@ export default function Verify() {
           // Centre when there is room; anchor to the top once the keyboard
           // is up so the field and the submit button both stay above it.
           justifyContent: keyboardVisible ? "flex-start" : "center",
-          paddingHorizontal: 16,
+          paddingHorizontal: 28,
           paddingTop: keyboardVisible ? 12 : 24,
           paddingBottom: keyboardVisible ? 16 : 24,
         }}
@@ -94,19 +97,23 @@ export default function Verify() {
         showsVerticalScrollIndicator={false}
         bottomOffset={0}
       >
-          <View className="gap-6">
+          {/* Same capped column as the sign-in screen. */}
+          <View className="w-full max-w-[420px] self-center gap-7">
+            <MulticaLogo size={40} />
             <View className="gap-2">
-              <MulticaLogo size={28} />
-              <Text className="text-[22px] font-semibold tracking-tight text-foreground">
+              <Text
+                role="heading"
+                className="text-[30px] font-semibold leading-9 tracking-tight text-foreground"
+              >
                 {t("verify.enter_title")}
               </Text>
-              <Text className="text-[13px] text-muted-foreground">
+              <Text className="text-[15px] leading-[22px] text-muted-foreground">
                 {t("verify.sent_to", { email })}
               </Text>
             </View>
 
-            <View className="gap-2">
-              <Text className="text-xs font-medium text-muted-foreground">
+            <View className="gap-2.5">
+              <Text className="text-[13px] font-medium text-muted-foreground">
                 {t("verify.code_label")}
               </Text>
               <OtpInput
@@ -123,26 +130,29 @@ export default function Verify() {
               ) : null}
             </View>
 
-            <View className="gap-4">
+            <View className="gap-1">
               <Button
-                className="mt-2"
+                className="h-[52px]"
                 disabled={submitting || code.length < CODE_LENGTH}
                 onPress={() => submit(code)}
               >
-                <Text>{submitting ? t("verify.verifying") : t("verify.verify")}</Text>
+                <Text className="text-base font-semibold">
+                  {submitting ? t("verify.verifying") : t("verify.verify")}
+                </Text>
               </Button>
 
-              <View className="flex-row items-center justify-between">
+              <View className="flex-row flex-wrap items-center justify-between gap-x-4">
                 <Pressable
                   onPress={onResend}
                   disabled={cooldown > 0 || resending}
-                  hitSlop={8}
+                  accessibilityRole="button"
+                  className="min-h-11 justify-center active:opacity-70"
                 >
                   <Text
                     className={
                       cooldown > 0 || resending
                         ? "text-[13px] text-muted-foreground"
-                        : "text-[13px] font-medium text-foreground"
+                        : "text-[13px] font-semibold text-primary"
                     }
                   >
                     {resending
@@ -156,7 +166,8 @@ export default function Verify() {
                 <Pressable
                   onPress={() => router.back()}
                   disabled={submitting}
-                  hitSlop={8}
+                  accessibilityRole="button"
+                  className="min-h-11 justify-center active:opacity-70"
                 >
                   <Text className="text-[13px] text-muted-foreground">
                     {t("verify.change_email")}
@@ -164,6 +175,8 @@ export default function Verify() {
                 </Pressable>
               </View>
             </View>
+
+            <ApiHost />
           </View>
       </KeyboardAwareScrollView>
     </SafeAreaView>

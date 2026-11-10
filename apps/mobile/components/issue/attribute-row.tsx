@@ -1,18 +1,14 @@
 /**
- * Issue-detail properties.
+ * Issue-detail properties: the Graphite property list.
  *
- * Two exports, one data source — both read the same issue and the same
- * workspace catalog, and both are display-only: editing happens in the
- * properties card rows, each of which pushes a formSheet picker route. The
- * route reads the issue from the TanStack Query detail cache and fires its own
- * mutation — no onChange callback round-trip back here.
+ * A tight key/value list with one hairline above and below the block: a 13 px
+ * muted label in a fixed 104 dp column, a 15 px value, 44 dp rows. Each row is
+ * the tap target for its picker, which is a formSheet route that reads the
+ * issue from the TanStack Query detail cache and fires its own mutation, so
+ * there is no onChange round-trip back here.
  *
- *   AttributeBadgeRow — the single badge line under the title: status, plus
- *                       priority and project when they are set. A glance
- *                       surface; nothing here is tappable.
- *   AttributeRow      — the properties card: 12 px muted keys in a fixed
- *                       column, 13 px values, a hairline between rows. Every
- *                       row is the tap target for its picker.
+ * An empty editable field reads as its action in the accent ("Assign",
+ * "Set date") rather than as a dash.
  *
  * Picker route map (every entry is registered in `_layout.tsx` with shared
  * SHEET_OPTIONS — formSheet + iOS native grabber + explicit numeric detents):
@@ -28,11 +24,9 @@ import { Pressable, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
-import type { Issue, IssuePriority } from "@multica/core/types";
+import type { Issue } from "@multica/core/types";
 import { formatDateOnly } from "@multica/core/issues/date";
 import { Text } from "@/components/ui/text";
-import { Badge } from "@/components/ui/badge";
-import { StatusBadge } from "./status-badge";
 import { StatusIcon } from "@/components/ui/status-icon";
 import { PriorityIcon } from "@/components/ui/priority-icon";
 import { ActorAvatar } from "@/components/ui/actor-avatar";
@@ -46,13 +40,6 @@ import { useIssueStatuses } from "@/lib/use-issue-statuses";
 import { useColorScheme } from "@/lib/use-color-scheme";
 import { THEME } from "@/lib/theme";
 import { i18n, useT } from "@/lib/i18n";
-
-// Placeholder for an unset priority. The badge row omits the badge entirely;
-// the properties row names the field and shows an em dash.
-const PRIORITY_CHIP_LABEL: Record<IssuePriority, string> = {
-  ...PRIORITY_FULL_LABEL,
-  none: "issues:filters.priority",
-};
 
 /**
  * The picker fields the issue-detail properties can open. Bound to a
@@ -110,43 +97,6 @@ function useOpenPicker(issue: Issue) {
   };
 }
 
-/**
- * The badge line under the title. Status always renders through
- * `<StatusBadge>`; priority and project are quiet outline badges that only
- * appear once they carry a value — an unset field is the properties card's
- * job to surface, not the headline's.
- */
-export function AttributeBadgeRow({ issue }: { issue: Issue }) {
-  const { t } = useT("issues");
-  const { categoryOf, colorOf, labelOf } = useIssueStatuses();
-  const project = useIssueProject(issue);
-
-  return (
-    <View className="flex-row flex-wrap items-center gap-1.5">
-      <StatusBadge
-        label={labelOf(issue.status)}
-        status={issue.status}
-        category={categoryOf(issue.status)}
-        color={colorOf(issue.status)}
-      />
-
-      {issue.priority !== "none" ? (
-        <Badge variant="outline" className="gap-1.5">
-          <PriorityIcon priority={issue.priority} size={12} />
-          <Badge.Text>{t(PRIORITY_CHIP_LABEL[issue.priority])}</Badge.Text>
-        </Badge>
-      ) : null}
-
-      {project ? (
-        <Badge variant="outline" className="max-w-[180px] gap-1.5">
-          <ProjectIcon icon={project.icon} size="sm" />
-          <Badge.Text className="shrink">{project.title}</Badge.Text>
-        </Badge>
-      ) : null}
-    </View>
-  );
-}
-
 export function AttributeRow({ issue }: { issue: Issue }) {
   const { getName } = useActorLookup();
   const { t } = useT("issues");
@@ -167,23 +117,22 @@ export function AttributeRow({ issue }: { issue: Issue }) {
   const dueLabel = formatDueDate(issue.due_date);
 
   return (
-    <View className="overflow-hidden rounded-xl border border-border bg-card">
+    <View className="border-y border-border py-1">
       <PropertyRow
         label={t("common:fields.status")}
         value={labelOf(issue.status)}
+        emptyAction=""
         left={
           <StatusIcon
             status={issue.status}
             category={categoryOf(issue.status)}
             icon={iconOf(issue.status)}
             color={colorOf(issue.status)}
-            size={14}
+            size={16}
           />
         }
         onPress={() => openPicker("status")}
-        mutedFg={mutedFg}
       />
-      <Separator />
       <PropertyRow
         label={t("common:fields.priority")}
         value={
@@ -191,31 +140,34 @@ export function AttributeRow({ issue }: { issue: Issue }) {
             ? null
             : t(PRIORITY_FULL_LABEL[issue.priority])
         }
-        left={<PriorityIcon priority={issue.priority} size={14} />}
+        emptyAction={t("detail.empty_priority")}
+        left={
+          issue.priority === "none" ? null : (
+            <PriorityIcon priority={issue.priority} size={16} />
+          )
+        }
         onPress={() => openPicker("priority")}
-        mutedFg={mutedFg}
       />
-      <Separator />
       <PropertyRow
         label={t("common:fields.assignee")}
         value={assigneeName}
+        emptyAction={t("detail.empty_assignee")}
         left={
           assigneeValue ? (
             <ActorAvatar
               type={assigneeValue.type}
               id={assigneeValue.id}
-              size={18}
+              size={22}
               showPresence
             />
           ) : null
         }
         onPress={() => openPicker("assignee")}
-        mutedFg={mutedFg}
       />
-      <Separator />
       <PropertyRow
         label={t("common:fields.label")}
         value={labels.length > 0 ? labels.map((l) => l.name).join(", ") : null}
+        emptyAction={t("detail.empty_label")}
         left={
           labels.length > 0 ? (
             <View
@@ -225,25 +177,24 @@ export function AttributeRow({ issue }: { issue: Issue }) {
           ) : null
         }
         onPress={() => openPicker("label")}
-        mutedFg={mutedFg}
       />
-      <Separator />
       <PropertyRow
         label={t("common:fields.project")}
         value={project?.title ?? null}
+        emptyAction={t("detail.empty_project")}
         left={project ? <ProjectIcon icon={project.icon} size="sm" /> : null}
         onPress={() => openPicker("project")}
-        mutedFg={mutedFg}
       />
-      <Separator />
       <PropertyRow
         label={t("common:fields.due_date")}
         value={dueLabel}
+        emptyAction={t("detail.empty_due_date")}
         left={
-          <Ionicons name="calendar-outline" size={14} color={mutedFg} />
+          dueLabel ? (
+            <Ionicons name="calendar-outline" size={16} color={mutedFg} />
+          ) : null
         }
         onPress={() => openPicker("due-date")}
-        mutedFg={mutedFg}
       />
     </View>
   );
@@ -252,41 +203,39 @@ export function AttributeRow({ issue }: { issue: Issue }) {
 function PropertyRow({
   label,
   value,
+  emptyAction,
   left,
   onPress,
-  mutedFg,
 }: {
   label: string;
   value: string | null;
+  /** What tapping an empty row does, shown in the accent in place of a value. */
+  emptyAction: string;
   left: React.ReactNode;
   onPress: () => void;
-  mutedFg: string;
 }) {
   return (
     <Pressable
       onPress={onPress}
-      className="flex-row items-center gap-3 px-4 py-2.5 active:bg-secondary/60"
+      className="min-h-11 flex-row items-center px-5 active:bg-secondary"
       accessibilityRole="button"
-      accessibilityLabel={label}
+      accessibilityLabel={`${label}, ${value ?? emptyAction}`}
     >
-      <Text className="w-20 text-xs text-muted-foreground">{label}</Text>
-      <View className="flex-1 flex-row items-center gap-1.5">
+      <Text className="w-[104px] text-[13px] text-muted-foreground">
+        {label}
+      </Text>
+      <View className="flex-1 flex-row items-center gap-2">
         {left}
         <Text
           className={cn(
-            "flex-1 text-[13px]",
-            value ? "text-foreground" : "text-muted-foreground/70",
+            "flex-1 text-[15px] leading-[21px]",
+            value ? "text-foreground" : "text-primary",
           )}
           numberOfLines={1}
         >
-          {value ?? "—"}
+          {value ?? emptyAction}
         </Text>
       </View>
-      <Ionicons name="chevron-forward" size={14} color={mutedFg} />
     </Pressable>
   );
-}
-
-function Separator() {
-  return <View className="h-px ml-4 bg-border" />;
 }

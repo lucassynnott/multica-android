@@ -1,56 +1,29 @@
 /**
  * Activity (non-comment) timeline row.
  *
- * Nova timeline anatomy: a 7 px dot on a 1 px rail, a 13/500 title
- * (`[actor] [verb]`) and a 12 pt muted sub-line carrying the relative time.
- * The rail extends 8 px below the row so consecutive activity rows read as one
- * continuous line; a comment card interrupts it, which is the visual cue that
- * the thread has a surface of its own.
+ * Graphite anatomy: mono relative time in a narrow column, the actor's
+ * avatar, then one muted line (`[actor] [verb]`). A system event never
+ * competes with a comment for attention, so nothing in the row is coloured.
  *
  * Behaviour is unchanged from the web-parity implementation
  * (`packages/views/issues/components/issue-detail.tsx:1046-1100`):
  *   - the verb comes from `formatActivity` and is truncated to two lines
- *   - the dot carries the workspace colour of the NEW status when a custom
- *     status changed; everything else draws a neutral ring
- *   - the time is relative and sits on the sub-line
- *   - coalesced repeats show `×N` next to the time, except `task_completed` /
+ *   - coalesced repeats show `×N` after the verb, except `task_completed` /
  *     `task_failed`, whose phrase already bakes the count in.
  */
 import { View } from "react-native";
 import type { TimelineEntry } from "@multica/core/types";
 import { Text } from "@/components/ui/text";
+import { ActorAvatar } from "@/components/ui/actor-avatar";
 import { formatActivity } from "@/lib/format-activity";
-import { timeAgo } from "@/lib/time-ago";
 import { useActorLookup } from "@/data/use-actor-name";
 import { useIssueStatuses } from "@/lib/use-issue-statuses";
-import type { IssueStatusCatalog } from "@/lib/issue-status";
+import { compactTimeAgo } from "./compact-time";
 
-/** 7 px marker on the rail. Filled only when the row has a colour to carry. */
-function LeadDot({
-  entry,
-  catalog,
-}: {
-  entry: TimelineEntry;
-  catalog: IssueStatusCatalog;
-}) {
-  const details = (entry.details ?? {}) as Record<string, string>;
-  const color =
-    entry.action === "status_changed" && details.to
-      ? catalog.colorOf(details.to)
-      : null;
-
-  if (color) {
-    return (
-      <View
-        className="mt-[5px] h-[7px] w-[7px] rounded-full"
-        style={{ backgroundColor: color }}
-      />
-    );
-  }
-  return (
-    <View className="mt-[5px] h-[7px] w-[7px] rounded-full border border-muted-foreground/40 bg-background" />
-  );
-}
+/** Shared by every timeline row so times and avatars line up in columns. */
+export const TIMELINE_TIME_CLASS =
+  "w-12 font-mono text-xs leading-[22px] text-muted-foreground";
+export const TIMELINE_AVATAR_SIZE = 22;
 
 export function ActivityRow({ entry }: { entry: TimelineEntry }) {
   const { getName } = useActorLookup();
@@ -69,41 +42,29 @@ export function ActivityRow({ entry }: { entry: TimelineEntry }) {
     entry.action !== "task_failed";
 
   return (
-    <View className="px-4">
-      <View className="flex-row gap-3">
-        <View className="w-[7px] items-center">
-          <View
-            pointerEvents="none"
-            className="absolute top-0 w-px bg-border"
-            style={{ left: 3, bottom: -8 }}
-          />
-          <LeadDot entry={entry} catalog={catalog} />
-        </View>
-        <View className="flex-1 gap-0.5">
-          <Text
-            className="text-[13px] font-medium text-foreground"
-            numberOfLines={2}
-          >
-            {actorName}
-            {verb ? (
-              <Text className="text-[13px] font-normal text-muted-foreground">
-                {" "}
-                {verb}
-              </Text>
-            ) : null}
+    <View className="flex-row items-start gap-2.5 px-5 py-1">
+      <Text className={TIMELINE_TIME_CLASS} numberOfLines={1}>
+        {compactTimeAgo(entry.created_at)}
+      </Text>
+      <ActorAvatar
+        type={entry.actor_type as "member" | "agent" | "system"}
+        id={entry.actor_id}
+        name={entry.actor_name}
+        avatarUrl={entry.actor_avatar_url}
+        size={TIMELINE_AVATAR_SIZE}
+      />
+      <Text
+        className="flex-1 text-[15px] leading-[22px] text-muted-foreground"
+        numberOfLines={2}
+      >
+        {actorName}
+        {verb ? ` ${verb}` : ""}
+        {showCoalesceBadge ? (
+          <Text className="font-mono text-xs text-muted-foreground">
+            {"  "}×{entry.coalesced_count}
           </Text>
-          <View className="flex-row items-center gap-1.5">
-            <Text className="text-xs text-muted-foreground">
-              {timeAgo(entry.created_at)}
-            </Text>
-            {showCoalesceBadge ? (
-              <Text className="text-xs tabular-nums text-muted-foreground">
-                ×{entry.coalesced_count}
-              </Text>
-            ) : null}
-          </View>
-        </View>
-      </View>
+        ) : null}
+      </Text>
     </View>
   );
 }

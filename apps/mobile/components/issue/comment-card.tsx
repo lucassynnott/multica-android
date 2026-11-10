@@ -1,9 +1,9 @@
 /**
- * Comment timeline row. A single-surface card containing the parent comment
- * plus, when applicable, every descendant reply stacked inline. The card
- * boundary itself is the thread indicator — no "↪ Replying to" header, no
- * recursive indentation. This matches the user's design call: "放在一个 card
- * 内部就行了 / no need for the Replying to label".
+ * Comment timeline row: the parent comment plus, when applicable, every
+ * descendant reply stacked below it. Graphite draws a thread as list rows,
+ * not as a card — mono time column, the author's avatar, then the name and
+ * the full body — and marks replies with one hairline rail on their left.
+ * There is no "↪ Replying to" header and no recursive indentation.
  *
  * Mobile flat-list rule (apps/mobile/CLAUDE.md): same comments as web,
  * different layout — web shows recursive tree, mobile shows one bubble per
@@ -12,7 +12,7 @@
  * Interaction: long-press inside a bubble fires a native iOS
  * `ActionSheetIOS` with the comment's actions (Reply, React…, Copy,
  * Select Text, Copy Link, Resolve, Delete). While the sheet is on screen
- * the targeted bubble's border highlights. See `useCommentLongPress` in
+ * the targeted thread sits on `bg-secondary`. See `useCommentLongPress` in
  * `./comment-context-menu.tsx`.
  *
  * Resolved threads render in a collapsed `<ResolvedThreadBar>` by default —
@@ -41,6 +41,8 @@ import { Text } from "@/components/ui/text";
 import { ActorAvatar } from "@/components/ui/actor-avatar";
 import { useActorLookup } from "@/data/use-actor-name";
 import { timeAgo } from "@/lib/time-ago";
+import { compactTimeAgo } from "./compact-time";
+import { TIMELINE_AVATAR_SIZE, TIMELINE_TIME_CLASS } from "./activity-row";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Markdown } from "@/lib/markdown";
 import { CommentAttachmentList } from "@/components/issue/comment-attachment-list";
@@ -56,7 +58,6 @@ import { useFailedCommentsStore } from "@/data/stores/failed-comments-store";
 import { useColorScheme } from "@/lib/use-color-scheme";
 import { THEME } from "@/lib/theme";
 import { cn } from "@/lib/utils";
-import { continuousCorners } from "@/lib/radius";
 import { useT } from "@/lib/i18n";
 import { ReactionBar } from "./reaction-bar";
 import { useCommentLongPress } from "./comment-context-menu";
@@ -153,28 +154,20 @@ export function CommentCard({
   }
 
   return (
-    <View className="px-4">
-      {/* One surface per thread. The card IS the thread boundary — replies
-       *  stack inside it behind a hairline, so there is never a bordered box
-       *  inside a bordered box.
+    <View>
+      {/* One block of rows per thread, no card: the list is the surface.
+       *  Replies stack under the root behind a left hairline rail.
        *
-       *  `bg-card` + `border-border` sit one step off the page (iOS settings
-       *  cell feel, see Refactoring UI #4). Internal markdown elements (table
-       *  headers / code blocks via markdown-style.ts) keep their own
-       *  `surface-2` framing, which is a distinct tier and reads as content,
-       *  not as a second card.
-       *
-       *  Resolved-and-expanded dims the card to 70% so the "this is settled"
-       *  signal persists even while reading the body — mirrors web's muted
-       *  resolved card visual. */}
+       *  Resolved-and-expanded dims the thread to 70% so the "this is
+       *  settled" signal persists even while reading the body — mirrors
+       *  web's muted resolved card visual. */}
       <View
         className={cn(
-          "rounded-xl border border-border bg-card px-4 py-3.5 gap-3",
+          "gap-2 py-1",
           resolved && "opacity-70",
-          isHighlighted && "border-primary/40",
-          isSelectingHere && "border-primary/40 bg-primary/5",
+          isHighlighted && "bg-secondary",
+          isSelectingHere && "bg-primary/5",
         )}
-        style={continuousCorners}
       >
         {resolved ? (
           <ResolvedIndicator
@@ -182,19 +175,24 @@ export function CommentCard({
             onCollapse={() => setExpanded(false)}
           />
         ) : null}
-        <CommentBody
-          entry={entry}
-          issueId={issueId}
-          issueIdentifier={issueIdentifier}
-          onPressChange={handlePressChange}
-        />
+        <View className="px-5">
+          <CommentBody
+            entry={entry}
+            issueId={issueId}
+            issueIdentifier={issueIdentifier}
+            onPressChange={handlePressChange}
+          />
+        </View>
         {/* A deleted reply renders nothing: its row is kept only so its own
          *  replies keep a direct parent (#8296), and this list is flat, so
          *  they already render in its place. Mirrors the reply list in
          *  packages/views/issues/components/comment-card.tsx. A deleted ROOT
          *  still renders its placeholder — it heads the thread. */}
         {visibleReplies.map((reply) => (
-          <View key={reply.id} className="border-t border-border pt-3">
+          <View
+            key={reply.id}
+            className="ml-5 border-l border-border py-1 pl-3 pr-5"
+          >
             <CommentBody
               entry={reply}
               issueId={issueId}
@@ -266,20 +264,27 @@ function ResolvedThreadBar({
   const total = 1 + replies.filter((reply) => !isDeletedComment(reply)).length;
 
   return (
-    <View className="px-4">
+    <View>
       <Pressable
         onPress={onExpand}
-        className="flex-row items-center gap-2.5 px-4 py-3 rounded-xl border border-border bg-card active:bg-secondary/60"
-        style={continuousCorners}
+        className="min-h-11 flex-row items-center gap-2.5 px-5 active:bg-secondary"
         accessibilityRole="button"
         accessibilityLabel={t(
           total === 1 ? "resolved.a11y_folded_one" : "resolved.a11y_folded_other",
           { authors: authorsLabel, count: total },
         )}
       >
-        <Ionicons name="checkmark-circle" size={18} color={mutedFg} />
+        <Text className={TIMELINE_TIME_CLASS} numberOfLines={1}>
+          {compactTimeAgo(entry.created_at)}
+        </Text>
+        <View
+          className="items-center justify-center"
+          style={{ width: TIMELINE_AVATAR_SIZE, height: TIMELINE_AVATAR_SIZE }}
+        >
+          <Ionicons name="checkmark-circle" size={18} color={mutedFg} />
+        </View>
         <Text
-          className="flex-1 text-sm text-muted-foreground"
+          className="flex-1 text-[15px] leading-[22px] text-muted-foreground"
           numberOfLines={1}
         >
           {t(total === 1 ? "resolved.summary_one" : "resolved.summary_other", {
@@ -322,16 +327,19 @@ function ResolvedIndicator({
   return (
     <Pressable
       onPress={onCollapse}
-      className="flex-row items-center gap-2 active:opacity-60"
+      className="min-h-11 flex-row items-center gap-2 px-5 active:bg-secondary"
       accessibilityRole="button"
       accessibilityLabel={t("resolved.collapse_a11y")}
     >
-      <Ionicons name="checkmark-circle" size={14} color={mutedFg} />
-      <Text className="text-xs text-muted-foreground flex-1" numberOfLines={1}>
+      <Ionicons name="checkmark-circle" size={16} color={mutedFg} />
+      <Text
+        className="flex-1 text-[13px] text-muted-foreground"
+        numberOfLines={1}
+      >
         {t("resolved.resolved_by", { name: resolverName })}
         {entry.resolved_at ? ` · ${timeAgo(entry.resolved_at)}` : ""}
       </Text>
-      <Text className="text-xs text-muted-foreground">
+      <Text className="text-[13px] text-muted-foreground">
         {t("resolved.collapse")}
       </Text>
     </Pressable>
@@ -339,14 +347,13 @@ function ResolvedIndicator({
 }
 
 /**
- * Animated highlight overlay for a root comment bubble. Sits absolute-
- * positioned over the parent <View className="rounded-xl">, no pointer
- * capture (long-press still works through it). Border + background wash
- * — equivalent to web's `ring-2 ring-brand/50 bg-brand/5`.
+ * Animated highlight overlay for a comment thread. Sits absolute-positioned
+ * over the thread's rows, no pointer capture (long-press still works through
+ * it). An accent wash — the row-list equivalent of web's
+ * `ring-2 ring-brand/50 bg-brand/5`.
  *
- * Reflow note: animating `borderWidth` would push children every frame,
- * so we keep it constant at 2 and animate `opacity` 0→1→0. Same trick
- * for the wash. Single shared value, one animated style.
+ * Only `opacity` is animated (0→1→0), on a single shared value, so nothing
+ * reflows.
  */
 function RootHighlightOverlay({ active }: { active: boolean }) {
   const progress = useSharedValue(0);
@@ -363,15 +370,13 @@ function RootHighlightOverlay({ active }: { active: boolean }) {
 
   const style = useAnimatedStyle(() => ({ opacity: progress.value }));
 
-  // Brand colour comes from the `brand` token; alpha via NativeWind `/50`
-  // syntax mirrors web's `ring-brand/50 bg-brand/5`. Only opacity is
-  // animated — the borderColor / backgroundColor stay constant, so
-  // className is safe here (animating those channels via className isn't).
+  // Only opacity is animated; the background colour stays constant, so
+  // className is safe here (animating that channel via className isn't).
   return (
     <Animated.View
       pointerEvents="none"
-      className="absolute inset-0 rounded-xl border-2 border-brand/50 bg-brand/5"
-      style={[continuousCorners, style]}
+      className="absolute inset-0 bg-primary/10"
+      style={style}
     />
   );
 }
@@ -397,7 +402,7 @@ function ReplyHighlightOverlay({ active }: { active: boolean }) {
   return (
     <Animated.View
       pointerEvents="none"
-      className="absolute inset-0 bg-brand/5"
+      className="absolute inset-0 bg-primary/10"
       style={style}
     />
   );
@@ -423,6 +428,7 @@ function CommentBody({
     (s) => s.selectingId === entry.id,
   );
   const { getName } = useActorLookup();
+  const { t } = useT("issues");
   const userId = useAuthStore((s) => s.user?.id);
   const wsId = useWorkspaceStore((s) => s.currentWorkspaceId);
   const toggle = useToggleCommentReaction(issueId);
@@ -520,53 +526,66 @@ function CommentBody({
     // it and the thread would otherwise have no head. Mirrors the root
     // placeholder in packages/views/issues/components/comment-card.tsx.
     return (
-      <Text className="text-sm italic text-muted-foreground">
-        This comment was deleted
-      </Text>
+      <View className="flex-row items-start gap-2.5">
+        <Text className={TIMELINE_TIME_CLASS} numberOfLines={1}>
+          {compactTimeAgo(entry.created_at)}
+        </Text>
+        <View style={{ width: TIMELINE_AVATAR_SIZE }} />
+        <Text className="flex-1 text-[15px] leading-[22px] text-muted-foreground">
+          {t("comments.deleted")}
+        </Text>
+      </View>
     );
   }
 
   const body = (
-    <View className="gap-2">
-      <View className="flex-row items-center gap-2">
-        <ActorAvatar
-          type={entry.actor_type as "member" | "agent"}
-          id={entry.actor_id}
-          name={entry.actor_name}
-          avatarUrl={entry.actor_avatar_url}
-          size={24}
-          showPresence
-        />
-        <Text className="text-[13px] font-medium text-foreground">{name}</Text>
-        <Text className="text-xs text-muted-foreground">
-          · {timeAgo(entry.created_at)}
-          {edited ? " · (edited)" : ""}
-        </Text>
-      </View>
-      {entry.content ? (
-        <Markdown
-          content={entry.content}
-          attachments={attachments}
-          selectable={isSelecting}
-        />
-      ) : null}
-      <CommentAttachmentList
-        attachments={entry.attachments}
-        content={entry.content}
+    <View className="flex-row items-start gap-2.5">
+      <Text className={TIMELINE_TIME_CLASS} numberOfLines={1}>
+        {compactTimeAgo(entry.created_at)}
+      </Text>
+      <ActorAvatar
+        type={entry.actor_type as "member" | "agent"}
+        id={entry.actor_id}
+        name={entry.actor_name}
+        avatarUrl={entry.actor_avatar_url}
+        size={TIMELINE_AVATAR_SIZE}
+        showPresence
       />
-      {failed ? (
-        <FailedActions
-          error={failed.error}
-          onRetry={handleRetry}
-          onDiscard={handleDiscard}
+      <View className="flex-1 gap-1.5">
+        <Text className="text-[15px] font-semibold leading-[22px] text-foreground">
+          {name}
+          {edited ? (
+            <Text className="text-[13px] font-normal text-muted-foreground">
+              {"  "}
+              {t("comments.edited")}
+            </Text>
+          ) : null}
+        </Text>
+        {entry.content ? (
+          <Markdown
+            content={entry.content}
+            attachments={attachments}
+            selectable={isSelecting}
+          />
+        ) : null}
+        <CommentAttachmentList
+          attachments={entry.attachments}
+          content={entry.content}
         />
-      ) : (
-        <ReactionBar
-          reactions={reactions}
-          currentUserId={userId}
-          onToggle={onToggleReaction}
-        />
-      )}
+        {failed ? (
+          <FailedActions
+            error={failed.error}
+            onRetry={handleRetry}
+            onDiscard={handleDiscard}
+          />
+        ) : (
+          <ReactionBar
+            reactions={reactions}
+            currentUserId={userId}
+            onToggle={onToggleReaction}
+          />
+        )}
+      </View>
     </View>
   );
 
@@ -599,31 +618,31 @@ function FailedActions({
   const { t } = useT("issues");
   const destructive = THEME[colorScheme].destructive;
   return (
-    <View className="flex-row items-center gap-2 mt-0.5">
+    <View className="flex-row items-center gap-3">
       <Ionicons name="alert-circle" size={14} color={destructive} />
       <Text
-        className="flex-1 text-xs text-destructive"
+        className="flex-1 text-[13px] text-destructive"
         numberOfLines={1}
       >
         {error || t("failed.send")}
       </Text>
       <Pressable
         onPress={onRetry}
-        hitSlop={6}
+        hitSlop={14}
         accessibilityRole="button"
         accessibilityLabel={t("failed.retry_a11y")}
       >
-        <Text className="text-xs text-primary font-medium">
+        <Text className="text-[13px] font-semibold text-primary">
           {t("failed.retry")}
         </Text>
       </Pressable>
       <Pressable
         onPress={onDiscard}
-        hitSlop={6}
+        hitSlop={14}
         accessibilityRole="button"
         accessibilityLabel={t("failed.discard_a11y")}
       >
-        <Text className="text-xs text-muted-foreground font-medium">
+        <Text className="text-[13px] font-semibold text-muted-foreground">
           {t("failed.discard")}
         </Text>
       </Pressable>

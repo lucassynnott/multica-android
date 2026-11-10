@@ -8,6 +8,9 @@
  * as a `useState` inside `chat.tsx`, but now that session picking happens
  * on a separate route screen, we need a cross-screen channel. Same minimum
  * pattern as `useNewIssueDraftStore` for the new-issue form.
+ *
+ * Each row is two targets: the row itself selects the session, and a trailing
+ * 44dp trash button deletes it behind the same confirm the long-press uses.
  */
 import { Alert, Pressable, ScrollView, View } from "react-native";
 import { router } from "expo-router";
@@ -15,7 +18,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import type { ChatSession } from "@multica/core/types";
 import { Text } from "@/components/ui/text";
-import { Separator } from "@/components/ui/separator";
 import { ActorAvatar } from "@/components/ui/actor-avatar";
 import { chatSessionsOptions } from "@/data/queries/chat";
 import { useDeleteChatSession } from "@/data/mutations/chat";
@@ -29,7 +31,7 @@ import { useT } from "@/lib/i18n";
 export default function ChatSessionsRoute() {
   const wsId = useWorkspaceStore((s) => s.currentWorkspaceId);
   const { colorScheme } = useColorScheme();
-  const mutedFg = THEME[colorScheme].mutedForeground;
+  const theme = THEME[colorScheme];
   const { t } = useT("chat");
   const { data: sessions = [] } = useQuery(chatSessionsOptions(wsId));
   const activeSessionId = useChatSessionPickerStore((s) => s.activeSessionId);
@@ -61,41 +63,43 @@ export default function ChatSessionsRoute() {
 
   return (
     <View className="flex-1 bg-background">
-      <View className="px-4 pt-4 pb-3">
-        <Text className="text-base font-semibold text-foreground">
+      <View className="flex-row items-baseline gap-2 px-5 pb-3 pt-5">
+        <Text role="heading" className="text-xl font-semibold text-foreground">
           {t("sessions.title")}
         </Text>
+        {sessions.length > 0 ? (
+          <Text className="font-mono text-[13px] text-muted-foreground">
+            {sessions.length}
+          </Text>
+        ) : null}
       </View>
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         {sessions.length === 0 ? (
-          <View className="px-4 py-8">
-            <Text className="text-[13px] text-muted-foreground text-center">
+          <View className="px-5 py-8">
+            <Text className="text-[13px] text-muted-foreground">
               {t("sessions.empty")}
             </Text>
           </View>
         ) : (
-          sessions.map((session, idx) => {
+          sessions.map((session) => {
             const selected = session.id === activeSessionId;
             const archived = session.status === "archived";
+            const title = session.title || t("sessions.new_chat");
             return (
-              <View key={session.id}>
+              <View
+                key={session.id}
+                className="flex-row items-center border-t border-border"
+              >
                 <Pressable
                   onPress={() => {
                     requestSelect(session.id);
                     router.back();
                   }}
                   onLongPress={() => confirmDelete(session)}
-                  className={cn(
-                    "flex-row items-center gap-3 px-4 py-3 active:bg-secondary",
-                    selected && "bg-secondary/60",
-                  )}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected }}
+                  className="min-h-14 flex-1 flex-row items-center gap-3 py-2.5 pl-5 pr-1 active:bg-secondary"
                 >
-                  <View
-                    className={cn(
-                      "h-2 w-2 rounded-full",
-                      session.has_unread ? "bg-primary" : "bg-transparent",
-                    )}
-                  />
                   <ActorAvatar
                     type="agent"
                     id={session.agent_id}
@@ -105,30 +109,42 @@ export default function ChatSessionsRoute() {
                   <View className="flex-1">
                     <Text
                       className={cn(
-                        "text-sm text-foreground",
-                        (session.has_unread || selected) && "font-medium",
+                        "text-[15px] leading-[21px] text-foreground",
+                        (session.has_unread || selected) && "font-semibold",
                       )}
                       numberOfLines={1}
                     >
-                      {session.title || t("sessions.new_chat")}
+                      {title}
                     </Text>
                     {archived ? (
-                      <Text className="mt-0.5 text-xs text-muted-foreground">
+                      <Text className="font-mono text-xs text-muted-foreground">
                         {t("sessions.archived")}
                       </Text>
                     ) : null}
                   </View>
+                  {session.has_unread ? (
+                    <View className="h-2 w-2 rounded-full bg-primary" />
+                  ) : null}
                   {selected ? (
-                    <Ionicons name="checkmark" size={18} color={mutedFg} />
-                  ) : (
-                    <Ionicons name="chevron-forward" size={18} color={mutedFg} />
-                  )}
+                    <Ionicons
+                      name="checkmark"
+                      size={18}
+                      color={theme.foreground}
+                    />
+                  ) : null}
                 </Pressable>
-                {idx !== sessions.length - 1 ? (
-                  <View className="px-4">
-                    <Separator />
-                  </View>
-                ) : null}
+                <Pressable
+                  onPress={() => confirmDelete(session)}
+                  accessibilityRole="button"
+                  accessibilityLabel={t("sessions.delete_a11y", { title })}
+                  className="mr-2 h-11 w-11 items-center justify-center rounded-lg active:bg-secondary"
+                >
+                  <Ionicons
+                    name="trash-outline"
+                    size={18}
+                    color={theme.mutedForeground}
+                  />
+                </Pressable>
               </View>
             );
           })

@@ -19,12 +19,28 @@ import { useWorkspaceStore } from "@/data/workspace-store";
 import { MessageComposer } from "@/components/composer/message-composer";
 import { useT } from "@/lib/i18n";
 
-export function InlineCommentComposer({ issueId }: { issueId: string }) {
+export function InlineCommentComposer({
+  issueId,
+  surface,
+}: {
+  issueId: string;
+  /** The surface the composer sits on; the detail pane is `bg-card`. */
+  surface?: "background" | "card";
+}) {
   const createComment = useCreateComment(issueId);
   const { t } = useT("issues");
   const wsSlug = useWorkspaceStore((s) => s.currentWorkspaceSlug);
-  const replyTarget = useReplyTargetStore((s) => s.target);
-  const clearReplyTarget = useReplyTargetStore((s) => s.clear);
+  // The store is a singleton and a second issue detail can be mounted (the
+  // detail pane under a pushed issue screen): ignore another issue's target.
+  const replyTarget = useReplyTargetStore((s) =>
+    s.target?.issueId === issueId ? s.target : null,
+  );
+  const clearStoredReplyTarget = useReplyTargetStore((s) => s.clear);
+  const clearReplyTarget = useCallback(() => {
+    if (useReplyTargetStore.getState().target?.issueId === issueId) {
+      clearStoredReplyTarget();
+    }
+  }, [issueId, clearStoredReplyTarget]);
 
   const onSubmit = useCallback(
     async ({
@@ -58,6 +74,7 @@ export function InlineCommentComposer({ issueId }: { issueId: string }) {
         params: { workspace: wsSlug ?? "", mode: "comment" },
       }}
       uploadContext={{ issueId }}
+      surface={surface}
       placeholder={t("comments.composer_placeholder")}
       pillLabel={t("comments.composer_pill")}
       pillIcon="chatbubble-ellipses-outline"

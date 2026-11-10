@@ -8,17 +8,11 @@
  *     offer conversation starters so the composer is not a blank dead end.
  *   - returning (at least one prior session exists) → lead with starter
  *     starters. Tapping prefills the draft so the user can edit before sending.
- *
- * Copy mirrors the web `chat.json` namespace 1:1. Mobile doesn't have
- * i18n yet so the strings are inlined in English — when mobile adopts
- * i18n the lookup keys (`empty_state.first_time_title` etc.) are already
- * established on the web side, so the migration is a literal
- * key-by-key swap.
  */
-import { View } from "react-native";
+import { Pressable, View } from "react-native";
 import type { Agent, AgentConversationStarter } from "@multica/core/types";
 import { Text } from "@/components/ui/text";
-import { Button } from "@/components/ui/button";
+import { ActorAvatar } from "@/components/ui/actor-avatar";
 import { useT } from "@/lib/i18n";
 
 const FALLBACK_CONVERSATION_STARTER_KEYS = [
@@ -49,37 +43,46 @@ export function ChatEmptyState({ hasSessions, agent, onPickPrompt }: Props) {
   );
   const starters = configured.length > 0 ? configured : fallbackStarters;
   return (
-    <View className="flex-1 items-center justify-center px-6 py-8 gap-5">
-      <View className="items-center gap-1">
-        <Text className="text-base font-semibold text-foreground text-center">
-          {title}
-        </Text>
-        {agent?.description ? (
-          <Text className="text-sm text-muted-foreground text-center">
-            {agent.description}
+    <View className="flex-1 justify-center px-5 py-8">
+      <View className="w-full max-w-[420px] gap-6 self-center">
+        <View className="gap-2">
+          {agent ? (
+            <View className="mb-1">
+              <ActorAvatar type="agent" id={agent.id} size={40} />
+            </View>
+          ) : null}
+          <Text className="text-xl font-semibold text-foreground">
+            {title}
           </Text>
-        ) : null}
-        {!hasSessions ? (
-          <Text className="text-sm text-muted-foreground text-center">
-            {t("empty.examples")}
-          </Text>
+          {agent?.description ? (
+            <Text className="text-[15px] leading-[22px] text-muted-foreground">
+              {agent.description}
+            </Text>
+          ) : null}
+          {!hasSessions ? (
+            <Text className="text-[13px] leading-[19px] text-muted-foreground">
+              {t("empty.examples")}
+            </Text>
+          ) : null}
+        </View>
+        {agent ? (
+          <View className="gap-2">
+            {starters.map((item, index) => (
+              <Pressable
+                key={index}
+                onPress={() => onPickPrompt(item.prompt)}
+                className="min-h-11 flex-row items-center rounded-lg border border-border px-3.5 py-2.5 active:bg-secondary"
+                accessibilityRole="button"
+                accessibilityLabel={item.label}
+              >
+                <Text className="flex-1 text-[15px] leading-[21px] text-foreground">
+                  {item.label}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
         ) : null}
       </View>
-      {agent ? (
-        <View className="w-full max-w-xs gap-2">
-          {starters.map((item, index) => (
-            <Button
-              key={index}
-              variant="outline"
-              onPress={() => onPickPrompt(item.prompt)}
-              className="h-auto min-h-9 justify-start px-3 py-2.5"
-              accessibilityLabel={item.label}
-            >
-              <Text className="text-sm text-foreground">{item.label}</Text>
-            </Button>
-          ))}
-        </View>
-      ) : null}
     </View>
   );
 }

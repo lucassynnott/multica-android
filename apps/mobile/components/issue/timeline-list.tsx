@@ -294,8 +294,8 @@ export function TimelineList({
       <IssueHeaderCard issue={issue} />
       <IssueDescription issueId={issue.id} description={issue.description} />
       <IssueReactionRow issue={issue} />
-      <View className="mt-4 px-4 pt-3 border-t border-border">
-        <Text className="text-[11px] font-medium text-muted-foreground">
+      <View className="px-5 pt-[18px]">
+        <Text className="text-[13px] font-semibold text-muted-foreground">
           {t("detail.activity")}
         </Text>
       </View>
@@ -367,11 +367,9 @@ export function TimelineList({
         maintainVisibleContentPosition={{
           startRenderingFromBottom: !!highlightCommentId,
         }}
-        // "Activity" is a section heading, not a sibling row — it should
-        // hug the first entry the way iOS Settings / Linear sections do.
-        // 8 px is the within-group step; 16 would make the heading float
-        // above its own list.
-        ListHeaderComponentStyle={{ marginBottom: 8 }}
+        // "Activity" is a section heading, not a sibling row: it hugs the
+        // first entry. Rows carry 4 dp of their own top padding.
+        ListHeaderComponentStyle={{ marginBottom: 6 }}
         ItemSeparatorComponent={RowSeparator}
         renderItem={({ item }) => {
           if (item.entry.id === DIVIDER_ID) {
@@ -416,13 +414,13 @@ export function TimelineList({
 }
 
 /**
- * 8 px vertical gap between every timeline row — the within-group step of the
- * 16 / 8 / 24 rhythm. FlashList ignores `gap-*` on `contentContainer`, so the
- * spacing is supplied via this separator component — same pattern as
- * chat-message-list.tsx.
+ * 2 dp between timeline rows; with each row's own 4 dp vertical padding that
+ * makes the 10 dp step of the activity list. FlashList ignores `gap-*` on
+ * `contentContainer`, so the spacing is supplied via this separator component,
+ * the same pattern as chat-message-list.tsx.
  */
 function RowSeparator() {
-  return <View style={{ height: 8 }} />;
+  return <View style={{ height: 2 }} />;
 }
 
 /**
@@ -435,12 +433,12 @@ function RowSeparator() {
 function UnreadDivider() {
   const { t } = useT("issues");
   return (
-    <View className="flex-row items-center gap-2 px-4">
-      <View className="flex-1 h-px bg-destructive/40" />
-      <Text className="text-[11px] font-medium text-destructive">
+    <View className="flex-row items-center gap-2 px-5 py-1">
+      <View className="flex-1 h-px bg-primary/40" />
+      <Text className="text-[13px] font-semibold text-primary">
         {t("new_badge")}
       </Text>
-      <View className="flex-1 h-px bg-destructive/40" />
+      <View className="flex-1 h-px bg-primary/40" />
     </View>
   );
 }
@@ -469,25 +467,16 @@ function NewCommentChip({
   return (
     <Pressable
       onPress={onPress}
-      className="absolute bottom-3 self-center px-3.5 py-1.5 rounded-full bg-primary active:opacity-80 flex-row items-center gap-1.5"
+      className="absolute bottom-3 min-h-11 self-center flex-row items-center gap-1.5 rounded-lg bg-primary px-4 active:opacity-80"
       accessibilityRole="button"
       accessibilityLabel={t(
         count === 1 ? "jump_a11y_one" : "jump_a11y_other",
         { count },
       )}
-      style={{
-        // shadow comes from system, not Tailwind — keeps the chip readable
-        // against either light or dark timeline content beneath.
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.18,
-        shadowRadius: 6,
-        elevation: 4,
-      }}
     >
       <Ionicons name="arrow-down" size={14} color={fg} />
-      <Text className="text-xs font-semibold text-primary-foreground">
-        {count} new
+      <Text className="text-[13px] font-semibold text-primary-foreground">
+        {t("new_count", { count })}
       </Text>
     </Pressable>
   );

@@ -19,6 +19,8 @@ import { Pressable, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Text } from "@/components/ui/text";
 import { useT } from "@/lib/i18n";
+import { THEME } from "@/lib/theme";
+import { useColorScheme } from "@/lib/use-color-scheme";
 import { cn } from "@/lib/utils";
 
 export interface MarkdownToolbarProps {
@@ -40,8 +42,6 @@ export interface MarkdownToolbarProps {
   disabled?: boolean;
 }
 
-const ICON_COLOR = "#71717a"; // muted-foreground
-
 export function MarkdownToolbar({
   onAt,
   onList,
@@ -53,8 +53,10 @@ export function MarkdownToolbar({
   disabled,
 }: MarkdownToolbarProps) {
   const { t } = useT("editor");
+  const { colorScheme } = useColorScheme();
+  const ICON_COLOR = THEME[colorScheme].mutedForeground;
   return (
-    <View className="flex-row items-center gap-1 px-2 py-1.5 border-t border-border bg-background">
+    <View className="flex-row items-center border-t border-border bg-background px-2 py-1">
       <ToolbarButton
         accessibilityLabel={t("a11y.mention_someone")}
         onPress={onAt}
@@ -133,9 +135,8 @@ function ToolbarButton({
       disabled={disabled}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
-      hitSlop={6}
       className={cn(
-        "h-9 w-9 items-center justify-center rounded-md active:bg-secondary",
+        "h-11 w-11 items-center justify-center rounded-lg active:bg-secondary",
         disabled && "opacity-40",
       )}
     >

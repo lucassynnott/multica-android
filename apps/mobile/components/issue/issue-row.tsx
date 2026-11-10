@@ -3,10 +3,10 @@
  * (tabs)/my-issues, more/issues (workspace-wide), pins, and project detail's
  * related-issues bucket.
  *
- * Anatomy (shadcn Nova list row): leading priority glyph, a two-line body
- * (title 14/500, one meta line with the identifier), and the assignee avatar
- * trailing. Everything sits on the 4pt grid: 12pt vertical padding, 12pt
- * between the leading glyph block and the body.
+ * Anatomy (DESIGN.md "Row"): the mono identifier in a fixed 62dp column, the
+ * title at 15/21, one trailing meta at 12 (the due date, else the priority —
+ * vermilion and 600 only when the issue is urgent), then the assignee avatar.
+ * Priority is text here, not a coloured glyph: vermilion is the only accent.
  *
  * `showStatus` is opt-in because the grouped lists already carry the status
  * CATEGORY in their section header (rendering the glyph again per-row would be
@@ -36,11 +36,17 @@ import { Pressable, View } from "react-native";
 import type { Issue } from "@multica/core/types";
 import { Text } from "@/components/ui/text";
 import { ActorAvatar } from "@/components/ui/actor-avatar";
-import { PriorityIcon } from "@/components/ui/priority-icon";
 import { StatusIcon } from "@/components/ui/status-icon";
 import { StatusBadge } from "@/components/issue/status-badge";
-import { issueColumnCategory, isCustomStatus } from "@/lib/issue-status";
+import { formatDateOnly } from "@multica/core/issues/date";
+import {
+  issueColumnCategory,
+  isCustomStatus,
+  PRIORITY_LABEL,
+} from "@/lib/issue-status";
 import { useIssueStatuses } from "@/lib/use-issue-statuses";
+import { i18n, useT } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
 
 interface Props {
   issue: Issue;
@@ -53,6 +59,13 @@ interface Props {
    * the sections above them instead of being indented twice.
    */
   flush?: boolean;
+  /** The issue is open in the detail pane beside the list. */
+  selected?: boolean;
+  /**
+   * Two-line layout for the ~300dp list column of a list + detail split:
+   * id, meta and avatar on one line, the title on the next.
+   */
+  stacked?: boolean;
 }
 
 export function IssueRow({
@@ -60,64 +73,135 @@ export function IssueRow({
   onPress,
   showStatus = false,
   flush = false,
+  selected = false,
+  stacked = false,
 }: Props) {
   // One catalog read for the icon's colour, the badge colour and the custom
   // status name — see the divergence note in `custom-status-chip.tsx`.
   const catalog = useIssueStatuses();
+  const { t } = useT("issues");
   const category = issueColumnCategory(issue);
   const customStatus = isCustomStatus(catalog, issue.status);
+  const urgent = issue.priority === "urgent";
+  // One meta slot: urgency outranks the date, the date outranks a routine
+  // priority, and "no priority" says nothing.
+  const meta: string | null = urgent
+    ? t(PRIORITY_LABEL.urgent)
+    : issue.due_date
+      ? formatDateOnly(
+          issue.due_date,
+          { month: "short", day: "numeric" },
+          i18n.resolvedLanguage ?? i18n.language,
+        )
+      : issue.priority !== "none"
+        ? t(PRIORITY_LABEL[issue.priority])
+        : null;
+
+  const identifier = (
+    <Text
+      className={cn(
+        "font-mono text-xs leading-[21px] text-muted-foreground",
+        stacked ? "min-w-0 flex-1" : "w-[62px] shrink-0",
+      )}
+      numberOfLines={1}
+    >
+      {issue.identifier}
+    </Text>
+  );
+  // The glyph is per CATEGORY, so a custom status draws its category's icon
+  // rather than falling back to Todo's; the colour is what tells two statuses
+  // of one category apart. (MUL-6243)
+  const statusIcon = showStatus ? (
+    <View className="h-[21px] justify-center">
+      <StatusIcon
+        status={issue.status}
+        category={category}
+        icon={catalog.iconOf(issue.status)}
+        color={catalog.colorOf(issue.status)}
+        size={14}
+      />
+    </View>
+  ) : null;
+  const title = (
+    <View className={cn("gap-1", !stacked && "min-w-0 flex-1")}>
+      <Text
+        className="text-[15px] leading-[21px] text-foreground"
+        numberOfLines={2}
+      >
+        {issue.title}
+      </Text>
+      {customStatus ? (
+        <View className="flex-row">
+          <StatusBadge
+            label={catalog.labelOf(issue.status)}
+            status={issue.status}
+            category={category}
+            color={catalog.colorOf(issue.status)}
+          />
+        </View>
+      ) : null}
+    </View>
+  );
+  const metaText = meta ? (
+    <Text
+      className={cn(
+        "shrink-0 text-xs leading-[21px]",
+        urgent ? "font-semibold text-primary" : "text-muted-foreground",
+      )}
+      numberOfLines={1}
+    >
+      {meta}
+    </Text>
+  ) : null;
+  const avatar =
+    issue.assignee_type && issue.assignee_id ? (
+      <ActorAvatar
+        type={issue.assignee_type}
+        id={issue.assignee_id}
+        size={stacked ? 20 : 22}
+        showPresence
+      />
+    ) : null;
+
+  if (stacked) {
+    return (
+      <Pressable
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityState={{ selected }}
+        className={cn(
+          "min-h-11 gap-1 py-2.5 active:bg-secondary",
+          !flush && "px-5",
+          selected && "bg-secondary",
+        )}
+      >
+        <View className="flex-row items-center gap-2">
+          {statusIcon}
+          {identifier}
+          {metaText}
+          {avatar}
+        </View>
+        {title}
+      </Pressable>
+    );
+  }
 
   return (
     <Pressable
       onPress={onPress}
-      className={`active:bg-secondary py-3 ${flush ? "" : "px-4"}`}
+      accessibilityRole="button"
+      accessibilityState={{ selected }}
+      className={cn(
+        "min-h-11 flex-row items-start gap-2 py-2.5 active:bg-secondary",
+        !flush && "px-5",
+        selected && "bg-secondary",
+      )}
     >
-      <View className="flex-row items-center gap-3">
-        {/* The glyph is per CATEGORY, so a custom status draws its category's
-            icon rather than falling back to Todo's; the colour is what tells
-            two statuses of one category apart. (MUL-6243) */}
-        <View className="flex-row items-center gap-2 shrink-0">
-          {showStatus ? (
-            <StatusIcon
-              status={issue.status}
-              category={category}
-              icon={catalog.iconOf(issue.status)}
-              color={catalog.colorOf(issue.status)}
-              size={14}
-            />
-          ) : null}
-          <PriorityIcon priority={issue.priority} size={14} />
-        </View>
-        <View className="flex-1 min-w-0">
-          <Text
-            className="text-sm font-medium text-foreground leading-[19px]"
-            numberOfLines={1}
-          >
-            {issue.title}
-          </Text>
-          <View className="flex-row items-center gap-2 mt-0.5">
-            <Text className="text-[11px] text-muted-foreground tabular-nums shrink-0">
-              {issue.identifier}
-            </Text>
-            {customStatus ? (
-              <StatusBadge
-                label={catalog.labelOf(issue.status)}
-                status={issue.status}
-                category={category}
-                color={catalog.colorOf(issue.status)}
-              />
-            ) : null}
-          </View>
-        </View>
-        {issue.assignee_type && issue.assignee_id ? (
-          <ActorAvatar
-            type={issue.assignee_type}
-            id={issue.assignee_id}
-            size={20}
-            showPresence
-          />
-        ) : null}
-      </View>
+      {identifier}
+      {statusIcon}
+      {title}
+      {metaText}
+      {avatar}
     </Pressable>
   );
 }

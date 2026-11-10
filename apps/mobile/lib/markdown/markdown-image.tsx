@@ -20,6 +20,12 @@
  * unknown reference fails the getSize callback and we fall back to a
  * 16:9 placeholder slot.
  *
+ * Size cap: the image never renders wider than 420dp or taller than 360dp.
+ * Without it a phone screenshot in a chat reply fills the whole unfolded
+ * screen (the column there is 760dp wide, so a 9:19 image would be 1600dp
+ * tall). The box keeps the image's real aspect ratio, so nothing is cropped
+ * or letterboxed; the lightbox still shows it full size.
+ *
  * Cancellation: a content re-render that swaps the URI must not let the
  * previous getSize callback overwrite state — guard with a `cancelled`
  * flag in the cleanup path.
@@ -33,13 +39,18 @@ import { resolveAttachmentUrl } from "@/lib/attachment-url";
 import { useLightbox } from "./lightbox-provider";
 import { useImageSequence } from "./image-sequence";
 
+const MAX_WIDTH = 420;
+const MAX_HEIGHT = 360;
+/** Narrower than this, the height cap binds before the width cap does. */
+const TALL_ASPECT = MAX_WIDTH / MAX_HEIGHT;
+
 interface Props {
   uri: string;
   alt?: string;
   attachments?: Attachment[];
 }
 
-export function MarkdownImage({ uri, attachments }: Props) {
+export function MarkdownImage({ uri, alt, attachments }: Props) {
   const { open } = useLightbox();
   const sequence = useImageSequence();
   const [aspect, setAspect] = useState<number | null>(null);
@@ -86,12 +97,27 @@ export function MarkdownImage({ uri, attachments }: Props) {
     };
   }, [resolvedUri]);
 
+  const ratio = aspect ?? 16 / 9;
+  // Wide or square: fill the column up to MAX_WIDTH, height follows the
+  // ratio and cannot pass MAX_HEIGHT. Tall: pin the height to MAX_HEIGHT and
+  // let the width follow; `maxWidth: "100%"` only matters inside a bubble
+  // narrower than that derived width.
+  const boxStyle =
+    ratio >= TALL_ASPECT
+      ? ({ width: "100%", maxWidth: MAX_WIDTH, aspectRatio: ratio } as const)
+      : ({ height: MAX_HEIGHT, maxWidth: "100%", aspectRatio: ratio } as const);
+
   return (
-    <Pressable onPress={() => open(resolvedUri, sequence)}>
-      <View className="rounded-lg overflow-hidden bg-muted">
+    <Pressable
+      onPress={() => open(resolvedUri, sequence)}
+      accessibilityRole="imagebutton"
+      accessibilityLabel={alt || undefined}
+      style={[{ alignSelf: "flex-start" }, boxStyle]}
+    >
+      <View className="flex-1 overflow-hidden rounded-lg border border-border bg-card">
         <ExpoImage
           source={{ uri: resolvedUri }}
-          style={{ width: "100%", aspectRatio: aspect ?? 16 / 9 }}
+          style={{ width: "100%", height: "100%" }}
           contentFit="contain"
           transition={150}
         />

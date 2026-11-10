@@ -102,7 +102,8 @@
     "title": "聊天",
     "empty": "还没有聊天。",
     "archived": "已归档",
-    "new_chat": "新建聊天"
+    "new_chat": "新建聊天",
+    "delete_a11y": "删除聊天 {{title}}"
   },
   "picker.title": "选择智能体",
   "no_response": "本轮已结束，智能体没有返回文字回复。",
@@ -166,5 +167,16 @@
   "elapsed.failed": "运行 {{time}} 后失败",
   "alerts.no_permission_message": "你已无权运行该智能体，消息未发送。请联系该智能体的所有者申请权限。",
   "failure.runtime_access_denied": "消息未发送：{{detail}}",
-  "banners.no_agent_action": "在 \"更多 → 智能体\" 中添加或启用智能体即可开始聊天。"
+  "banners.no_agent_action": "在 \"更多 → 智能体\" 中添加或启用智能体即可开始聊天。",
+  "no_agents": {
+    "title": "聊天需要一个智能体",
+    "body": "智能体会在这里回复你，并处理你分配给它们的事项。这个工作区还没有你可以使用的智能体。",
+    "step_runtime_title": "连接运行时",
+    "step_runtime_body": "在一台保持开机的电脑上运行 Multica 守护进程。",
+    "step_agent_title": "创建智能体",
+    "step_agent_body": "将它绑定到该运行时，它才能运行。",
+    "step_return_title": "回到这里",
+    "step_return_body": "你的智能体就可以开始聊天了。",
+    "open_agents": "打开智能体"
+  }
 }

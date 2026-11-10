@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { tokenAtCursor } from "./mention-serialize";
+import {
+  insertMention,
+  serializeMentions,
+  tokenAtCursor,
+} from "./mention-serialize";
 
 // The mobile half of the shared boundary rule. The rule's own matrix lives in
 // packages/core/markdown/mention-boundary.test.ts; this covers the wiring — that
@@ -44,5 +48,26 @@ describe("tokenAtCursor boundary", () => {
 
   it("still returns the query when the cursor is mid-token", () => {
     expect(tokenAtCursor("你好@Mi", 5)).toEqual({ start: 2, query: "Mi" });
+  });
+});
+
+describe("serializeMentions", () => {
+  it("links a mention whose display name contains a space", () => {
+    const first = insertMention(
+      "ping @jo",
+      { start: 5, queryLength: 2 },
+      { type: "member", id: "u1", name: "Johnny Silverhand" },
+    );
+    const text = `${first.newText}about @MU`;
+    const second = insertMention(
+      text,
+      { start: text.length - 3, queryLength: 2 },
+      { type: "issue", id: "i1", name: "MUL-1" },
+    );
+    expect(
+      serializeMentions(second.newText, [first.marker, second.marker]),
+    ).toBe(
+      "ping [@Johnny Silverhand](mention://member/u1) about [MUL-1](mention://issue/i1) ",
+    );
   });
 });

@@ -1,23 +1,20 @@
 /**
  * Description input block shared by `new-issue.tsx` and `issue/[id]/edit.tsx`.
  *
- * Focus-tinted `rounded-xl` container wrapping the `AutosizeTextArea` —
- * matches the "write markdown body" treatment used by the comment composer
- * so all three surfaces feel like the same control.
+ * Borderless: on a form whose only job is title + body, the description is
+ * the page, not a field on it. 15/23 body type, no panel, no focus tint.
  *
  * Pure UI shell. The mention pipeline lives in the caller's `useMentionInput`
  * instance, passed in as `description`. Callers also own the floating
  * `MentionSuggestionBar` (it has to sit above the keyboard, outside the
  * scroll view).
  */
-import { useState } from "react";
-import { View } from "react-native";
 import { AutosizeTextArea } from "@/components/ui/autosize-textarea";
 import { MIN_BODY_INPUT_HEIGHT_PX } from "@/components/ui/input-tokens";
-import { cn } from "@/lib/utils";
+import { THEME } from "@/lib/theme";
+import { useColorScheme } from "@/lib/use-color-scheme";
 import { useT } from "@/lib/i18n";
 import type { UseMentionInputReturn } from "@/lib/use-mention-input";
-import { continuousCorners } from "@/lib/radius";
 
 export function DescriptionField({
   description,
@@ -29,30 +26,20 @@ export function DescriptionField({
   placeholder?: string;
 }) {
   const { t } = useT("issues");
-  const [focused, setFocused] = useState(false);
+  const { colorScheme } = useColorScheme();
   const resolvedPlaceholder = placeholder ?? t("new.description_placeholder");
   return (
-    <View
-      className={cn(
-        "rounded-xl border px-3",
-        focused
-          ? "border-primary/30 bg-secondary"
-          : "border-transparent bg-secondary/40",
-      )}
-      style={continuousCorners}
-    >
-      <AutosizeTextArea
-        value={description.text}
-        onChangeText={description.handlers.onChangeText}
-        selection={description.selection}
-        onSelectionChange={description.handlers.onSelectionChange}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
-        placeholder={resolvedPlaceholder}
-        className="py-2"
-        minHeight={MIN_BODY_INPUT_HEIGHT_PX}
-        editable={!disabled}
-      />
-    </View>
+    <AutosizeTextArea
+      value={description.text}
+      onChangeText={description.handlers.onChangeText}
+      selection={description.selection}
+      onSelectionChange={description.handlers.onSelectionChange}
+      placeholder={resolvedPlaceholder}
+      placeholderTextColor={THEME[colorScheme].mutedForeground}
+      accessibilityLabel={t("common:fields.description")}
+      className="p-0 font-sans text-[15px] leading-[23px]"
+      minHeight={MIN_BODY_INPUT_HEIGHT_PX}
+      editable={!disabled}
+    />
   );
 }

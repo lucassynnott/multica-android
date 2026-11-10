@@ -1,24 +1,23 @@
 /**
- * One kanban column: a status header with its live card count and a
- * vertically scrolling card stack. The header is sticky within the column so
- * a long column keeps its identity while scrolling, and the width is passed
- * in from the board so every column on screen agrees on geometry.
+ * One kanban column: a 48dp header (name 13/600, mono count, activity trace,
+ * "+") over a vertically scrolling stack of cards. Columns are divided by a
+ * hairline on the right instead of a gutter, and the width is passed in from
+ * the board so every column on screen agrees on geometry.
  *
- * Header is name (13/600) + CountBadge + one quiet action. The status colour
- * survives as an 8 px dot instead of the full glyph: the column title is the
- * identity, the dot is the only thing a custom status can say that its name
- * cannot.
+ * The stack is a FlatList, so a column with hundreds of cards mounts only the
+ * ones near the viewport.
  */
-import { Pressable, ScrollView, View } from "react-native";
+import { FlatList, Pressable, View } from "react-native";
 import type { Issue } from "@multica/core/types";
 import { Text } from "@/components/ui/text";
-import { CountBadge } from "@/components/ui/badge";
 import { Ionicons } from "@expo/vector-icons";
 import { BoardCard } from "./board-card";
+import { BoardTrace } from "./board-trace";
 import type { BoardColumnModel } from "@/lib/board";
 import type { IssueStatusCatalog } from "@/lib/issue-status";
 import { useColorScheme } from "@/lib/use-color-scheme";
 import { THEME } from "@/lib/theme";
+import { useT } from "@/lib/i18n";
 
 interface Props {
   column: BoardColumnModel;
@@ -40,8 +39,7 @@ export function BoardColumn({
   draggingIssueId,
 }: Props) {
   const { colorScheme } = useColorScheme();
-  const muted = THEME[colorScheme].mutedForeground;
-  const color = column.color ?? catalog.colorOf(column.status);
+  const { t } = useT("issues");
   // The header can only name the status when the catalog knows it. A key the
   // catalog has never heard of (a legacy or deleted custom status) leaves the
   // header showing a raw key with no category signal, so those cards carry
@@ -49,61 +47,66 @@ export function BoardColumn({
   const columnNamesStatus = catalog.entryOf(column.status) !== undefined;
 
   return (
-    <View style={{ width }} className="flex-1">
-      <View className="mb-3 h-10 flex-row items-center gap-2">
-        <View
-          className="h-2 w-2 rounded-full"
-          style={{ backgroundColor: color ?? muted }}
-        />
+    <View style={{ width }} className="flex-1 border-r border-border">
+      <View className="h-12 flex-row items-center gap-2 border-b border-border pl-4 pr-0.5">
         <Text
+          accessibilityRole="header"
           className="shrink text-[13px] font-semibold text-foreground"
           numberOfLines={1}
         >
           {column.title}
         </Text>
-        <CountBadge value={column.issues.length} />
+        <Text className="font-mono text-xs text-muted-foreground">
+          {column.issues.length}
+        </Text>
         <View className="flex-1" />
+        <BoardTrace issues={column.issues} />
         <Pressable
           onPress={() => onAddIssue(column.status)}
-          hitSlop={8}
-          className="h-8 w-8 items-center justify-center rounded-md active:bg-secondary"
-          accessibilityLabel={`Add issue to ${column.title}`}
+          className="h-11 w-11 items-center justify-center rounded-lg active:bg-secondary"
+          accessibilityRole="button"
+          accessibilityLabel={t("board.add_to_column", { status: column.title })}
         >
-          <Ionicons name="add" size={16} color={muted} />
+          <Ionicons
+            name="add"
+            size={18}
+            color={THEME[colorScheme].mutedForeground}
+          />
         </Pressable>
       </View>
 
-      <ScrollView
+      <FlatList
+        data={column.issues}
+        keyExtractor={(issue) => issue.id}
+        // Re-render rows when the dragged card changes, not only when data does.
+        extraData={draggingIssueId}
+        renderItem={({ item }) => (
+          <BoardCard
+            issue={item}
+            dragging={draggingIssueId === item.id}
+            onPress={onPressIssue}
+            onLongPress={onLongPressIssue}
+            showStatus={!columnNamesStatus}
+            statusLabel={catalog.labelOf(item.status)}
+            statusCategory={catalog.categoryOf(item.status)}
+            statusColor={catalog.colorOf(item.status)}
+          />
+        )}
+        ListEmptyComponent={
+          <View className="h-16 items-center justify-center rounded-lg border border-dashed border-border">
+            <Text className="text-[13px] text-muted-foreground">
+              {t("board.empty_column")}
+            </Text>
+          </View>
+        }
+        initialNumToRender={8}
+        windowSize={7}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ gap: 8, paddingBottom: 32 }}
+        contentContainerStyle={{ gap: 8, padding: 10, paddingBottom: 32 }}
         // While a card is being dragged the column must not scroll under it;
         // the board owns that gesture.
         scrollEnabled={!draggingIssueId}
-      >
-        {column.issues.length === 0 ? (
-          <View
-            style={{ width }}
-            className="h-16 items-center justify-center rounded-xl border border-dashed border-border"
-          >
-            <Text className="text-[11px] text-muted-foreground">{"\u2014"}</Text>
-          </View>
-        ) : (
-          column.issues.map((issue) => (
-            <BoardCard
-              key={issue.id}
-              issue={issue}
-              width={width}
-              dragging={draggingIssueId === issue.id}
-              onPress={() => onPressIssue(issue)}
-              onLongPress={() => onLongPressIssue(issue)}
-              showStatus={!columnNamesStatus}
-              statusLabel={catalog.labelOf(issue.status)}
-              statusCategory={catalog.categoryOf(issue.status)}
-              statusColor={catalog.colorOf(issue.status)}
-            />
-          ))
-        )}
-      </ScrollView>
+      />
     </View>
   );
 }

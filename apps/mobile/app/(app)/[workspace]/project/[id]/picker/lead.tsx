@@ -9,7 +9,9 @@ import { ProjectLeadPickerBody } from "@/components/project/pickers/project-lead
 import { projectDetailOptions } from "@/data/queries/projects";
 import { useUpdateProject } from "@/data/mutations/projects";
 import { useWorkspaceStore } from "@/data/workspace-store";
-import { useNativeSearchBar } from "@/lib/use-native-search-bar";
+import { View } from "react-native";
+import { PickerSearchField } from "@/components/ui/picker-search-field";
+import { usePickerSearch } from "@/lib/use-native-search-bar";
 import { useT } from "@/lib/i18n";
 
 export default function ProjectLeadPickerRoute() {
@@ -18,7 +20,7 @@ export default function ProjectLeadPickerRoute() {
   const wsId = useWorkspaceStore((s) => s.currentWorkspaceId);
   const { data: project } = useQuery(projectDetailOptions(wsId, id));
   const updateProject = useUpdateProject(id);
-  const query = useNativeSearchBar(t("picker.search_members_agents"), {
+  const search = usePickerSearch(t("picker.search_members_agents"), {
     autoFocus: true,
   });
 
@@ -28,17 +30,20 @@ export default function ProjectLeadPickerRoute() {
       : null;
 
   return (
-    <ProjectLeadPickerBody
-      value={value}
-      query={query}
-      onChange={(next) => {
-        if (next === null) {
-          updateProject.mutate({ lead_type: null, lead_id: null });
-        } else {
-          updateProject.mutate({ lead_type: next.type, lead_id: next.id });
-        }
-        router.back();
-      }}
-    />
+    <View className="flex-1">
+      <PickerSearchField search={search} />
+      <ProjectLeadPickerBody
+        value={value}
+        query={search.query}
+        onChange={(next) => {
+          if (next === null) {
+            updateProject.mutate({ lead_type: null, lead_id: null });
+          } else {
+            updateProject.mutate({ lead_type: next.type, lead_id: next.id });
+          }
+          router.back();
+        }}
+      />
+    </View>
   );
 }

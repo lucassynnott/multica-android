@@ -2,10 +2,9 @@
  * Project issues, grouped by concrete status — the same sections the other
  * issue lists use.
  *
- * One card per status group: the group header names the status through
- * StatusBadge and its count through CountBadge, then the rows follow inside the
- * same surface. Rows keep their own `px-4`, so the card border is the only
- * vertical edge and nothing is indented twice.
+ * A "Related issues" group header with the total, then one DESIGN.md group
+ * header per status (44dp, top hairline, name 13/600, mono count) followed by
+ * its rows. No panels: rows sit on the page gutter like every other list.
  */
 import { useMemo } from "react";
 import { View } from "react-native";
@@ -14,8 +13,7 @@ import { router } from "expo-router";
 import type { IssueStatus } from "@multica/core/types";
 import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
-import { CountBadge } from "@/components/ui/badge";
-import { StatusBadge } from "@/components/issue/status-badge";
+import { StatusIcon } from "@/components/ui/status-icon";
 import { IssueRow } from "@/components/issue/issue-row";
 import { IssuesLoading } from "@/components/issue/issues-loading";
 import { projectIssuesOptions } from "@/data/queries/projects";
@@ -47,30 +45,47 @@ export function ProjectRelatedIssues({ projectId }: Props) {
     if (wsSlug) router.push(`/${wsSlug}/issue/${id}`);
   };
 
-  if (isLoading) return <IssuesLoading />;
-
-  if (error) {
-    return (
-      <View className="gap-3 py-6">
-        <Text className="text-[13px] text-destructive">
-          {t("errors.load_failed", {
-            message: error instanceof Error ? error.message : "unknown",
-          })}
+  const title = (
+    <View className="h-11 flex-row items-center gap-2.5 border-t border-border px-5">
+      <Text className="text-[13px] font-semibold text-foreground">
+        {tProject("detail.related_issues")}
+      </Text>
+      {data && data.length > 0 ? (
+        <Text className="font-mono text-xs text-muted-foreground">
+          {data.length}
         </Text>
-        <Button variant="outline" onPress={() => refetch()}>
-          <Text>{t("common:actions.retry")}</Text>
-        </Button>
+      ) : null}
+    </View>
+  );
+
+  if (isLoading) return <IssuesLoading />;
+  // The error replaces the list only when there is nothing to show.
+  if (error && !data) {
+    return (
+      <View>
+        {title}
+        <View className="gap-3 px-5 pb-3">
+          <Text className="text-[15px] leading-[21px] text-foreground">
+            {t("errors.load_failed", {
+              message: error instanceof Error ? error.message : "unknown",
+            })}
+          </Text>
+          <Button
+            variant="outline"
+            className="min-h-11 self-start"
+            onPress={() => refetch()}
+          >
+            <Text>{t("common:actions.retry")}</Text>
+          </Button>
+        </View>
       </View>
     );
   }
-
   if ((data?.length ?? 0) === 0) {
     return (
-      <View className="gap-2">
-        <Text className="px-1 text-[11px] font-medium text-muted-foreground">
-          {tProject("detail.related_issues")}
-        </Text>
-        <Text className="text-[13px] text-muted-foreground">
+      <View>
+        {title}
+        <Text className="px-5 pb-3 text-[13px] text-muted-foreground">
           {t("list.empty")}
         </Text>
       </View>
@@ -78,17 +93,12 @@ export function ProjectRelatedIssues({ projectId }: Props) {
   }
 
   return (
-    <View className="gap-3">
-      <Text className="px-1 text-[11px] font-medium text-muted-foreground">
-        {tProject("detail.related_issues")}
-      </Text>
+    <View>
+      {title}
       {sections.map(({ status, data: issues }) => {
         if (issues.length === 0) return null;
         return (
-          <View
-            key={status}
-            className="overflow-hidden rounded-xl border border-border bg-card"
-          >
+          <View key={status}>
             <SectionHeader status={status} count={issues.length} />
             {issues.map((issue) => (
               <IssueRow
@@ -113,15 +123,18 @@ function SectionHeader({
 }) {
   const catalog = useIssueStatuses();
   return (
-    <View className="h-10 flex-row items-center gap-2 border-b border-border px-4">
-      <StatusBadge
-        label={catalog.labelOf(status)}
+    <View className="h-11 flex-row items-center gap-2.5 border-t border-border px-5">
+      <StatusIcon
         status={status}
         category={catalog.categoryOf(status)}
+        icon={catalog.iconOf(status)}
         color={catalog.colorOf(status)}
+        size={14}
       />
-      <View className="flex-1" />
-      <CountBadge value={count} />
+      <Text className="text-[13px] font-semibold text-foreground">
+        {catalog.labelOf(status)}
+      </Text>
+      <Text className="font-mono text-xs text-muted-foreground">{count}</Text>
     </View>
   );
 }

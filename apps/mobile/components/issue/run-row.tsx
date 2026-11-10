@@ -53,17 +53,19 @@ export function RunRow({ task, issueId }: Props) {
   const content = (
     <>
       <ActorAvatar type="agent" id={task.agent_id} size={28} showPresence />
-      <View className="flex-1 gap-1">
+      <View className="flex-1 gap-0.5">
         <Text
-          className="text-sm text-foreground"
+          className="text-[15px] leading-[21px] text-foreground"
           numberOfLines={2}
         >
-          <Text className="font-medium">{getName("agent", task.agent_id)}</Text>
-          <Text className="text-muted-foreground"> · {summary}</Text>
+          <Text className="text-[15px] font-semibold">
+            {getName("agent", task.agent_id)}
+          </Text>
+          <Text className="text-[15px] text-muted-foreground"> · {summary}</Text>
         </Text>
         <View className="flex-row items-center gap-2">
           <StatusBadge task={task} />
-          <Text className="text-xs text-muted-foreground">
+          <Text className="font-mono text-xs text-muted-foreground">
             {timestamp ? timeAgo(timestamp) : ""}
           </Text>
         </View>
@@ -80,7 +82,11 @@ export function RunRow({ task, issueId }: Props) {
   );
 
   if (!isTerminal || !workspace) {
-    return <View className="flex-row items-start gap-3 py-2">{content}</View>;
+    return (
+      <View className="min-h-[52px] flex-row items-center gap-3 px-5 py-2.5">
+        {content}
+      </View>
+    );
   }
 
   return (
@@ -88,7 +94,7 @@ export function RunRow({ task, issueId }: Props) {
       accessibilityRole="button"
       accessibilityLabel={t("runs.open_transcript", { summary })}
       onPress={() => router.push(runTranscriptRoute(workspace, issueId, task.id))}
-      className="flex-row items-start gap-3 py-2 active:opacity-60"
+      className="min-h-[52px] flex-row items-center gap-3 px-5 py-2.5 active:bg-secondary"
     >
       {content}
     </Pressable>
@@ -105,13 +111,13 @@ function StatusBadge({ task }: { task: AgentTask }) {
     const reasonLabel = runFailureBadgeLabel(task.failure_reason);
     if (reasonLabel) {
       return (
-        <Text className={`text-xs ${cls}`}>
+        <Text className={`text-[13px] ${cls}`}>
           {label} · {reasonLabel}
         </Text>
       );
     }
   }
-  return <Text className={`text-xs ${cls}`}>{label}</Text>;
+  return <Text className={`text-[13px] ${cls}`}>{label}</Text>;
 }
 
 function fallbackSummary(
@@ -136,9 +142,9 @@ function fallbackSummary(
 const STATUS_CLASS: Record<AgentTask["status"], string> = {
   queued: "text-muted-foreground",
   deferred: "text-muted-foreground",
-  dispatched: "text-brand",
+  dispatched: "text-foreground",
   waiting_local_directory: "text-muted-foreground",
-  running: "text-brand",
+  running: "text-foreground",
   completed: "text-muted-foreground",
   failed: "text-destructive",
   cancelled: "text-muted-foreground",

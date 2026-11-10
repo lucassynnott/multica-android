@@ -38,9 +38,12 @@ export function RunCancelButton({ taskId, issueId }: { taskId: string; issueId: 
         accessibilityRole="button"
         accessibilityLabel={label}
         accessibilityState={{ disabled, busy: mutation.isPending }}
-        className="px-3 py-1.5 rounded-md bg-secondary active:opacity-70"
+        hitSlop={{ top: 4, bottom: 4 }}
+        className="h-9 justify-center rounded-lg border border-border px-3 active:bg-secondary"
       >
-        <Text className="text-xs font-medium text-foreground">{label}</Text>
+        <Text className="text-[13px] font-semibold text-foreground">
+          {label}
+        </Text>
       </Pressable>
       {mutation.isError ? (
         <Text accessibilityRole="alert" className="text-xs text-destructive">

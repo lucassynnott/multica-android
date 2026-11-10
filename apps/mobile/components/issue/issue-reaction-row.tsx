@@ -39,7 +39,7 @@ export function IssueReactionRow({ issue }: { issue: Issue }) {
   if (reactions.length === 0) return null;
 
   return (
-    <View className="px-4 pb-3">
+    <View className="px-5 pb-2">
       <ReactionBar
         reactions={reactions}
         currentUserId={userId}

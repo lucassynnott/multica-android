@@ -2,13 +2,16 @@
  * Chat tab — single-screen IA.
  *
  * Layout:
- *   View ─ Header(center: ChatTitleButton, right: ChatSessionActions)
- *        ─ (NoAgentBanner?)
+ *   View ─ TideTexture
+ *        ─ Header(center: ChatTitleButton, right: ChatSessionActions)
  *        ─ KeyboardAvoidingView ─ ChatMessageList (includes live status
  *                                                  + timeline in its
  *                                                  ListFooterComponent)
  *                                ─ OfflineBanner
  *                                ─ ChatComposer
+ *
+ * With no agent this user can run, the list, banners and composer are all
+ * replaced by one NoAgentPanel.
  *
  * Session switching, agent selection, and session deletion all happen
  * inside this screen via Modal sheets — there is no `/chat/[id]` sub-route.
@@ -38,6 +41,8 @@ import {
   View,
 } from "react-native";
 import { router, useFocusEffect, useIsFocused } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useResponsiveLayout } from "@/lib/responsive";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   Agent,
@@ -84,18 +89,21 @@ import {
 import { useT } from "@/lib/i18n";
 import { useAgentPresence } from "@/lib/use-agent-presence";
 import { Header } from "@/components/ui/header";
+import { TideTexture } from "@/components/ui/tide-texture";
 import { ChatTitleButton } from "@/components/chat/chat-title-button";
 import { ChatSessionActions } from "@/components/chat/chat-session-actions";
 import { ChatMessageList } from "@/components/chat/chat-message-list";
 import { ChatComposer } from "@/components/chat/chat-composer";
 import { AgentPickerSheet } from "@/components/chat/agent-picker-sheet";
-import { NoAgentBanner } from "@/components/chat/no-agent-banner";
+import { NoAgentPanel } from "@/components/chat/no-agent-panel";
 import { OfflineBanner } from "@/components/chat/offline-banner";
 import { RuntimeRequiredBanner } from "@/components/chat/runtime-required-banner";
 import { useChatSelectStore } from "@/data/chat-select-store";
 import { isAgentRuntimeBound } from "@/lib/is-agent-runtime-bound";
 
 export default function ChatTab() {
+  const layout = useResponsiveLayout();
+  const insets = useSafeAreaInsets();
   const qc = useQueryClient();
   const { t } = useT("chat");
   const sendFailureMessage = useCallback((err: unknown) => {
@@ -504,6 +512,7 @@ export default function ChatTab() {
 
   return (
     <View className="flex-1 bg-background">
+      <TideTexture height={300} />
       <Header
         center={
           <ChatTitleButton
@@ -526,11 +535,30 @@ export default function ChatTab() {
           />
         }
       />
-      {availability === "none" ? <NoAgentBanner /> : null}
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         className="flex-1"
       >
+        {/* One readable column on the unfolded canvas: without a cap the
+            assistant's prose and the composer run the full 970dp. In rail
+            layouts nothing below this screen reserves the system navigation
+            strip (the bottom tab bar does that on the cover screen), so the
+            composer has to clear it itself. */}
+        <View
+          style={{
+            flex: 1,
+            width: "100%",
+            maxWidth: 760,
+            alignSelf: "center",
+            paddingBottom: layout.isCompact ? 0 : insets.bottom,
+          }}
+        >
+        {availability === "none" ? (
+          // Nothing to chat with: one panel says what is missing and where
+          // to fix it. No list, no banners, and no composer to type into.
+          <NoAgentPanel />
+        ) : (
+        <>
         <ChatMessageList
           messages={visibleMessages}
           loading={messagesLoading}
@@ -563,6 +591,9 @@ export default function ChatTab() {
           disabled={disabled}
           disabledReason={disabledReason}
         />
+        </>
+        )}
+        </View>
       </KeyboardAvoidingView>
 
       <AgentPickerSheet

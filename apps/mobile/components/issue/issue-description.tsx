@@ -4,8 +4,8 @@
  * muted placeholder rather than collapsing the block, so the layout above the
  * timeline stays stable when the user adds a description later.
  *
- * Nova anatomy: an 11 pt muted sentence-case "Description" label, 8 pt above
- * the body. Body type comes from the markdown renderer's own scale, which the
+ * Graphite anatomy: a 13/600 muted sentence-case "Description" label, 8 dp
+ * above the body. Body type comes from the markdown renderer's own scale, which the
  * markdown ADR owns — this file only sets the label and the block inset.
  *
  * Attachments are fetched per-issue so markdown can resolve `mc://file/<id>`
@@ -39,14 +39,14 @@ export function IssueDescription({
   const empty = !description || description.trim().length === 0;
 
   return (
-    <View className="px-4 pt-4 pb-2">
-      <Text className="text-[11px] font-medium text-muted-foreground">
+    <View className="px-5 pt-4 pb-2">
+      <Text className="text-[13px] font-semibold text-muted-foreground">
         {t("detail.description")}
       </Text>
       <View className="mt-2">
         {empty ? (
-          <Text className="text-[13px] text-muted-foreground/70">
-            No description.
+          <Text className="text-[15px] leading-[21px] text-muted-foreground">
+            {t("detail.no_description")}
           </Text>
         ) : (
           <Markdown content={description} attachments={attachments} />

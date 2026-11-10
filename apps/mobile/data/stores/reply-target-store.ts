@@ -20,6 +20,10 @@ import { create } from "zustand";
 
 export interface ReplyTarget {
   commentId: string;
+  /** The issue the comment belongs to. Two issue details can be mounted at
+   *  once on a wide window (the detail pane under a pushed issue screen), so
+   *  each composer only honours a target for its own issue. */
+  issueId: string;
   /** Display name for the "Replying to X" chip above the input. Resolved
    *  at trigger time via `useActorLookup().getName(actor_type, actor_id)`
    *  so the chip doesn't have to do its own actor lookup. */

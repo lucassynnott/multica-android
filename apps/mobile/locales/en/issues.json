@@ -49,7 +49,9 @@
   "list": {
     "empty": "No issues match your filters",
     "count_other": "{{count}} issues",
-    "search_placeholder": "Search issues and projects"
+    "search_placeholder": "Search issues and projects",
+    "no_results": "No results for “{{query}}”",
+    "search_failed": "Search failed. Check your connection and try again."
   },
   "detail": {
     "properties": "Properties",
@@ -65,14 +67,21 @@
     "open_on_web": "Open on web",
     "delete_comment": "Delete comment",
     "edit_comment": "Edit comment",
-    "no_runs": "No runs yet"
+    "no_runs": "No runs yet",
+    "no_description": "No description.",
+    "empty_priority": "Set priority",
+    "empty_assignee": "Assign",
+    "empty_label": "Add label",
+    "empty_project": "Add to project",
+    "empty_due_date": "Set date"
   },
   "new": {
     "title": "New issue",
     "title_placeholder": "Issue title",
     "create": "Create issue",
     "creating": "Creating...",
-    "description_placeholder": "Description... (type @ to mention)"
+    "description_placeholder": "Description... (type @ to mention)",
+    "status_preset_hint": "Created in {{status}} because you added it from that column."
   },
   "edit": {
     "title": "Edit issue",
@@ -122,7 +131,8 @@
     "created": "You haven't created any issues.",
     "agents": "No issues assigned to agents or squads.",
     "all": "No issues in this workspace.",
-    "members": "No issues assigned to a member."
+    "members": "No issues assigned to a member.",
+    "select_issue": "Select an issue"
   },
   "menu": {
     "pin": "Pin",
@@ -131,7 +141,8 @@
     "copy_link": "Copy link",
     "open_web": "Open on web",
     "delete_issue": "Delete issue",
-    "issue_actions": "Issue actions"
+    "issue_actions": "Issue actions",
+    "open_full_screen": "Open full screen"
   },
   "delete": {
     "title": "Delete issue?",
@@ -156,6 +167,7 @@
   "form": {
     "discard_title": "Discard changes?",
     "discard_message_issue": "Your edits to this issue will be lost.",
+    "discard_message_new_issue": "Your draft will be lost.",
     "keep_editing": "Keep editing",
     "save_failed": "Failed to save"
   },
@@ -200,7 +212,10 @@
     "more_reactions": "More reactions...",
     "fallback_actor": "comment",
     "composer_placeholder": "Add a comment…",
-    "composer_pill": "Add a comment, type @ to mention..."
+    "composer_pill": "Add a comment, type @ to mention...",
+    "deleted": "This comment was deleted",
+    "edited": "edited",
+    "add_reaction": "Add reaction"
   },
   "suggestions": {
     "everyone": "Everyone",
@@ -276,6 +291,14 @@
   },
   "header_filter": "Filter",
   "new_badge": "New",
+  "new_count": "{{count}} new",
+  "time_short": {
+    "now": "now",
+    "minutes": "{{count}}m",
+    "hours": "{{count}}h",
+    "days": "{{count}}d",
+    "weeks": "{{count}}w"
+  },
   "jump_a11y_one": "Jump to {{count}} new message",
   "jump_a11y_other": "Jump to {{count}} new messages",
   "a11y": {
@@ -296,13 +319,18 @@
     "cancel": "Cancel",
     "filter": "Filter",
     "new_issue": "New issue",
-    "count": "{{count}} issues",
+    "count_other": "{{count}} issues",
+    "count_one": "{{count}} issue",
+    "add_to_column": "Add issue to {{status}}",
     "unassigned": "Unassigned",
     "empty_column": "No issues",
     "move_top": "Move to top",
     "workflow_blocked_title": "Move not allowed",
     "workflow_blocked_body": "{{status}} is not a column in the {{workflow}} workflow. Allowed: {{allowed}}.",
     "move_failed_title": "Couldn't move the issue",
-    "move_failed_body": "{{error}}"
+    "move_failed_body": "{{error}}",
+    "view": "View",
+    "view_list": "List view",
+    "view_kanban": "Kanban view"
   }
 }

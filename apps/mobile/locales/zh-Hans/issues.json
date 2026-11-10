@@ -49,7 +49,9 @@
   "list": {
     "empty": "没有符合筛选条件的任务",
     "count_other": "{{count}} 个任务",
-    "search_placeholder": "搜索任务和项目"
+    "search_placeholder": "搜索任务和项目",
+    "no_results": "没有与“{{query}}”匹配的结果",
+    "search_failed": "搜索失败。请检查网络连接后重试。"
   },
   "detail": {
     "properties": "属性",
@@ -65,14 +67,21 @@
     "open_on_web": "在网页打开",
     "delete_comment": "删除评论",
     "edit_comment": "编辑评论",
-    "no_runs": "暂无运行"
+    "no_runs": "暂无运行",
+    "no_description": "暂无描述。",
+    "empty_priority": "设置优先级",
+    "empty_assignee": "分配",
+    "empty_label": "添加标签",
+    "empty_project": "添加到项目",
+    "empty_due_date": "设置日期"
   },
   "new": {
     "title": "新建任务",
     "title_placeholder": "任务标题",
     "create": "创建任务",
     "creating": "创建中...",
-    "description_placeholder": "描述...（输入 @ 提及）"
+    "description_placeholder": "描述...（输入 @ 提及）",
+    "status_preset_hint": "因为你是从「{{status}}」列添加的，所以将创建在该状态下。"
   },
   "edit": {
     "title": "编辑任务",
@@ -120,7 +129,8 @@
     "created": "你还没有创建任务。",
     "agents": "没有分配给智能体或小队的任务。",
     "all": "该工作区还没有任务。",
-    "members": "没有分配给成员的任务。"
+    "members": "没有分配给成员的任务。",
+    "select_issue": "选择一个任务"
   },
   "menu": {
     "pin": "固定",
@@ -129,7 +139,8 @@
     "copy_link": "复制链接",
     "open_web": "在网页打开",
     "delete_issue": "删除任务",
-    "issue_actions": "任务操作"
+    "issue_actions": "任务操作",
+    "open_full_screen": "全屏打开"
   },
   "delete": {
     "title": "删除任务？",
@@ -154,6 +165,7 @@
   "form": {
     "discard_title": "放弃修改？",
     "discard_message_issue": "你对这个任务的修改将会丢失。",
+    "discard_message_new_issue": "你的草稿将会丢失。",
     "keep_editing": "继续编辑",
     "save_failed": "保存失败"
   },
@@ -198,7 +210,10 @@
     "more_reactions": "更多表情...",
     "fallback_actor": "评论",
     "composer_placeholder": "添加评论...",
-    "composer_pill": "添加评论，输入 @ 提及..."
+    "composer_pill": "添加评论，输入 @ 提及...",
+    "deleted": "该评论已删除",
+    "edited": "已编辑",
+    "add_reaction": "添加回应"
   },
   "suggestions": {
     "everyone": "所有人",
@@ -272,6 +287,14 @@
   },
   "header_filter": "筛选",
   "new_badge": "新",
+  "new_count": "{{count}} 条新动态",
+  "time_short": {
+    "now": "刚刚",
+    "minutes": "{{count}}分",
+    "hours": "{{count}}时",
+    "days": "{{count}}天",
+    "weeks": "{{count}}周"
+  },
   "jump_a11y_other": "跳到 {{count}} 条新消息",
   "a11y": {
     "agent_working": "智能体处理中 — 打开运行",
@@ -295,13 +318,17 @@
     "cancel": "取消",
     "filter": "筛选",
     "new_issue": "新建任务",
-    "count": "{{count}} 个任务",
+    "count_other": "{{count}} 个任务",
+    "add_to_column": "在{{status}}中新建任务",
     "unassigned": "未指派",
     "empty_column": "暂无任务",
     "move_top": "移到顶部",
     "workflow_blocked_title": "无法移动",
     "workflow_blocked_body": "{{status}} 不在 {{workflow}} 工作流中。允许的状态：{{allowed}}。",
     "move_failed_title": "移动失败",
-    "move_failed_body": "{{error}}"
+    "move_failed_body": "{{error}}",
+    "view": "视图",
+    "view_list": "列表视图",
+    "view_kanban": "看板视图"
   }
 }

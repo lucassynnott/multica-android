@@ -11,24 +11,21 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   ScrollView,
-  TextInput,
-  View,
 } from "react-native";
-import { Stack, router, useLocalSearchParams } from "expo-router";
+import { Stack, useLocalSearchParams } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { Text } from "@/components/ui/text";
-import { TextField } from "@/components/ui/text-field";
-import { AutosizeTextArea } from "@/components/ui/autosize-textarea";
 import {
-  MIN_BODY_INPUT_HEIGHT_PX,
-  MOBILE_PLACEHOLDER_COLOR,
-} from "@/components/ui/input-tokens";
+  FormHeaderAction,
+  FormHeaderCancel,
+  ProjectFormFields,
+} from "@/components/project/project-form";
 import { projectDetailOptions } from "@/data/queries/projects";
 import { useUpdateProject } from "@/data/mutations/projects";
 import { useWorkspaceStore } from "@/data/workspace-store";
 import { useT } from "@/lib/i18n";
+import { useDiscardGuard } from "@/lib/use-discard-guard";
 
 export default function EditProject() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -63,9 +60,16 @@ export default function EditProject() {
   const canSave =
     seeded && title.trim().length > 0 && dirty && !update.isPending;
 
+  const leave = useDiscardGuard(dirty && !update.isSuccess, {
+    title: t("form.discard_title"),
+    message: t("form.discard_message"),
+    keep: t("form.keep_editing"),
+    discard: t("common:actions.discard"),
+  });
+
   const onCancel = useCallback(() => {
     if (!dirty) {
-      router.back();
+      leave();
       return;
     }
     Alert.alert(
@@ -76,11 +80,11 @@ export default function EditProject() {
         {
           text: t("common:actions.discard"),
           style: "destructive",
-          onPress: () => router.back(),
+          onPress: () => leave(),
         },
       ],
     );
-  }, [dirty, t]);
+  }, [dirty, leave, t]);
 
   const onSave = useCallback(() => {
     if (!canSave) return;
@@ -90,7 +94,7 @@ export default function EditProject() {
       icon: icon.trim() || null,
     };
     update.mutate(patch, {
-      onSuccess: () => router.back(),
+      onSuccess: () => leave(),
       onError: (err) => {
         Alert.alert(
           t("form.save_failed_edit"),
@@ -98,29 +102,25 @@ export default function EditProject() {
         );
       },
     });
-  }, [canSave, title, description, icon, update, t]);
+  }, [canSave, title, description, icon, update, leave, t]);
 
-  const headerLeft = useCallback(() => {
-    return (
-      <Pressable onPress={onCancel} className="px-1 py-1">
-        <Text className="text-base text-brand">{t("common:actions.cancel")}</Text>
-      </Pressable>
-    );
-  }, [onCancel, t]);
+  const headerLeft = useCallback(
+    () => (
+      <FormHeaderCancel label={t("common:actions.cancel")} onPress={onCancel} />
+    ),
+    [onCancel, t],
+  );
 
-  const headerRight = useCallback(() => {
-    return (
-      <Pressable
+  const headerRight = useCallback(
+    () => (
+      <FormHeaderAction
+        label={update.isPending ? t("actions.saving") : t("common:actions.save")}
         onPress={onSave}
         disabled={!canSave}
-        className={canSave ? "px-1 py-1" : "px-1 py-1 opacity-40"}
-      >
-        <Text className="text-base text-brand font-semibold">
-          {update.isPending ? t("actions.saving") : t("common:actions.save")}
-        </Text>
-      </Pressable>
-    );
-  }, [canSave, onSave, update.isPending, t]);
+      />
+    ),
+    [canSave, onSave, update.isPending, t],
+  );
 
   return (
     <>
@@ -131,70 +131,26 @@ export default function EditProject() {
       >
         <ScrollView
           className="flex-1"
-          contentContainerClassName="px-4 pt-5 pb-6 gap-4"
+          contentContainerClassName="gap-5 px-5 pb-6 pt-4"
           keyboardShouldPersistTaps="handled"
         >
           {!detail.data ? (
-            <Text className="text-sm text-muted-foreground">
+            <Text className="text-[15px] text-muted-foreground">
               {t("common:states.loading")}
             </Text>
           ) : (
-            <>
-              <Field label={t("form.icon_emoji")}>
-                <TextInput
-                  value={icon}
-                  onChangeText={(v) => {
-                    // Cap at two characters — emoji are usually 1-2 UTF-16
-                    // code units. Prevents the user typing a full sentence
-                    // by accident.
-                    setIcon(v.slice(0, 4));
-                  }}
-                  placeholder="📦"
-                  placeholderTextColor={MOBILE_PLACEHOLDER_COLOR}
-                  className="h-9 w-16 self-start rounded-md bg-secondary/50 px-3 text-center text-lg text-foreground"
-                  maxLength={4}
-                />
-              </Field>
-
-              <Field label={t("form.title")}>
-                <TextField
-                  value={title}
-                  onChangeText={setTitle}
-                  placeholder={t("form.title_placeholder")}
-                  className="h-9"
-                  autoFocus={!detail.data?.title}
-                  returnKeyType="next"
-                />
-              </Field>
-
-              <Field label={t("form.description")}>
-                <AutosizeTextArea
-                  value={description}
-                  onChangeText={setDescription}
-                  placeholder={t("form.description_placeholder")}
-                  className="rounded-md bg-secondary/50 px-3 py-2"
-                  minHeight={MIN_BODY_INPUT_HEIGHT_PX}
-                />
-              </Field>
-            </>
+            <ProjectFormFields
+              icon={icon}
+              onChangeIcon={setIcon}
+              title={title}
+              onChangeTitle={setTitle}
+              description={description}
+              onChangeDescription={setDescription}
+              autoFocusTitle={!detail.data.title}
+            />
           )}
         </ScrollView>
       </KeyboardAvoidingView>
     </>
-  );
-}
-
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <View className="gap-2">
-      <Text className="text-xs font-medium text-muted-foreground">{label}</Text>
-      {children}
-    </View>
   );
 }

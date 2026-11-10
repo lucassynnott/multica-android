@@ -18,12 +18,13 @@ import type { Agent, MemberWithUser } from "@multica/core/types";
 import { Text } from "@/components/ui/text";
 import { ActorAvatar } from "@/components/ui/actor-avatar";
 import { PickerRow } from "@/components/ui/picker-row";
-import { MOBILE_PLACEHOLDER_COLOR } from "@/components/ui/input-tokens";
 import { agentListOptions } from "@/data/queries/agents";
 import { memberListOptions } from "@/data/queries/members";
 import { useWorkspaceStore } from "@/data/workspace-store";
 import { useScrollToTopOnChange } from "@/lib/use-scroll-to-top-on-change";
 import { useT } from "@/lib/i18n";
+import { useColorScheme } from "@/lib/use-color-scheme";
+import { THEME } from "@/lib/theme";
 
 const AVATAR_SIZE = 28;
 
@@ -54,6 +55,7 @@ function isRowSelected(value: LeadValue | null, row: Row): boolean {
 export function ProjectLeadPickerBody({ value, query, onChange }: Props) {
   const wsId = useWorkspaceStore((s) => s.currentWorkspaceId);
   const { t } = useT("issues");
+  const { colorScheme } = useColorScheme();
   const { data: members = [] } = useQuery(memberListOptions(wsId));
   const { data: agents = [] } = useQuery(agentListOptions(wsId));
   const listRef = useScrollToTopOnChange(query);
@@ -116,11 +118,11 @@ export function ProjectLeadPickerBody({ value, query, onChange }: Props) {
           description={item.kind === "agent" ? t("picker.agent") : undefined}
           leading={
             item.kind === "unassigned" ? (
-              <View className="h-7 w-7 items-center justify-center rounded-full border border-dashed border-muted-foreground/40">
+              <View className="h-7 w-7 items-center justify-center rounded-full border border-dashed border-border">
                 <Ionicons
                   name="close-circle-outline"
                   size={16}
-                  color={MOBILE_PLACEHOLDER_COLOR}
+                  color={THEME[colorScheme].mutedForeground}
                 />
               </View>
             ) : item.kind === "member" ? (
@@ -143,8 +145,8 @@ export function ProjectLeadPickerBody({ value, query, onChange }: Props) {
         />
       )}
       ListEmptyComponent={
-        <View className="px-3 py-8 items-center">
-          <Text className="text-sm text-muted-foreground text-center">
+        <View className="px-5 py-6">
+          <Text className="text-[15px] leading-[21px] text-muted-foreground">
             {query
               ? t("picker.no_matches")
               : t("picker.no_members_agents")}

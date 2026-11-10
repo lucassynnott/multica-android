@@ -6,7 +6,8 @@
  * notification chip") adapted for RN:
  *
  *   - No chrome. No border, no background, no rounded-full pill. Just a
- *     line of muted text that lives at the end of the message stream.
+ *     mono line that lives at the end of the message stream: the current
+ *     stage in foreground, the elapsed counter muted.
  *   - "Breathing dots" instead of CSS shimmer. RN can't do
  *     `background-clip: text` gradient sweeps (web's
  *     `animate-chat-text-shimmer`), so we use the next-best activity cue:
@@ -167,13 +168,18 @@ function ActiveStatusPill({ pendingTask, taskMessages = [], availability }: Prop
 
   return (
     <View
-      className="flex-row items-center gap-1.5 px-1"
+      className="flex-row items-center gap-2"
       accessibilityLiveRegion="polite"
     >
       {stage.static ? null : <BreathingDots />}
-      <Text className="text-xs text-muted-foreground" numberOfLines={1}>
+      {/* The stage is the step the agent is on now, so it reads in
+          foreground; the counter stays muted. Mono, like the trace above. */}
+      <Text className="font-mono text-xs text-foreground" numberOfLines={1}>
         {stage.label}
-        <Text className="text-xs text-muted-foreground/70" style={TABULAR_NUMS}>
+        <Text
+          className="font-mono text-xs text-muted-foreground"
+          style={TABULAR_NUMS}
+        >
           {" · "}
           {formatElapsedSecs(elapsedSec)}
         </Text>

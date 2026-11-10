@@ -14,13 +14,12 @@
  * backend that predates it, that list is exactly the 7 built-ins this picker
  * always offered. (MUL-6243)
  *
- * Nova layer: each row renders the shared `StatusBadge`, so a status looks the
- * same here as on a board card or in the issue header; the selected row is
- * marked with `bg-secondary` and a single trailing check.
+ * Graphite: each row is the status icon plus its name — no colour fill — and
+ * the selected row carries a single trailing check in the accent.
  */
 import { ScrollView, View } from "react-native";
 import type { IssueStatus } from "@multica/core/types";
-import { StatusBadge } from "@/components/issue/status-badge";
+import { StatusIcon } from "@/components/ui/status-icon";
 import { PickerRow, PickerTitle } from "@/components/ui/picker-row";
 import { statusOptions } from "@/lib/issue-status";
 import { useIssueStatuses } from "@/lib/use-issue-statuses";
@@ -47,12 +46,14 @@ export function StatusPickerBody({ value, onChange }: Props) {
               key={option.key}
               onPress={() => onChange(option.key)}
               selected={selected}
-              labelNode={
-                <StatusBadge
-                  label={catalog.labelOf(option.key)}
+              label={catalog.labelOf(option.key)}
+              leading={
+                <StatusIcon
                   status={option.key}
                   category={option.category}
+                  icon={option.icon}
                   color={option.color}
+                  size={18}
                 />
               }
             />

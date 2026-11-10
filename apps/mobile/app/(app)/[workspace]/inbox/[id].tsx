@@ -34,13 +34,13 @@ function BillingRecovery({
       return <ActivityIndicator />;
     case "billing_disabled":
       return (
-        <Text className="text-[13.5px] leading-[21px] text-muted-foreground">
+        <Text className="text-[15px] leading-[21px] text-muted-foreground">
           {t("detail.billing_disabled")}
         </Text>
       );
     case "contact_admin":
       return (
-        <Text className="text-[13.5px] leading-[21px] text-muted-foreground">
+        <Text className="text-[15px] leading-[21px] text-muted-foreground">
           {t("detail.contact_admin")}
         </Text>
       );
@@ -56,7 +56,7 @@ function BillingRecovery({
           <Text>{t("detail.review_billing")}</Text>
         </Button>
       ) : (
-        <Text className="text-[13.5px] leading-[21px] text-muted-foreground">
+        <Text className="text-[15px] leading-[21px] text-muted-foreground">
           {t("detail.review_billing_web")}
         </Text>
       );
@@ -105,14 +105,12 @@ export default function InboxNoticeDetail() {
 
   return (
     <View className="flex-1 bg-background">
-      <View className="flex-row items-center gap-2 border-b border-border px-4 py-3">
-        <Text className="flex-1 text-[17px] font-semibold tracking-tight text-foreground">
+      <View className="min-h-14 flex-row items-center gap-2 border-b border-border pl-5 pr-2">
+        <Text className="flex-1 py-2 text-xl font-semibold text-foreground">
           {item ? getInboxDisplayTitle(item) : t("detail.notification")}
         </Text>
         <IconButton
           name="close"
-          variant="secondary"
-          className="size-7 rounded-full"
           onPress={() => router.back()}
           accessibilityLabel={t("detail.close")}
         />
@@ -125,19 +123,19 @@ export default function InboxNoticeDetail() {
       ) : !item ||
         (item.type !== "autopilot_quota_exceeded" &&
           item.type !== "autopilot_paused") ? (
-        <View className="px-4 py-8">
-          <Text className="text-[13px] text-muted-foreground text-center">
+        <View className="px-5 pt-6">
+          <Text className="text-[15px] leading-[21px] text-muted-foreground">
             {t("detail.unavailable")}
           </Text>
         </View>
       ) : (
         <ScrollView
           className="flex-1"
-          contentContainerClassName="gap-4 px-4 pt-4 pb-6"
+          contentContainerClassName="gap-4 px-5 pb-6 pt-4"
           showsVerticalScrollIndicator={false}
         >
           {body ? (
-            <Text className="text-[13.5px] leading-[21px] text-foreground">
+            <Text className="text-[15px] leading-[21px] text-foreground">
               {body}
             </Text>
           ) : null}

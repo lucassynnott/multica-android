@@ -11,6 +11,9 @@
  * Status + Priority filters mirror web's MyIssuesHeader filter sub-menus.
  * Filter state lives in `useMyIssuesViewStore` and is cleared on workspace
  * change via the shared `useClearFiltersOnWorkspaceChange` hook.
+ *
+ * Wide windows: a tap opens the issue in a detail pane beside the list
+ * (`SplitPane` + `IssueDetailPane`) instead of pushing the issue screen.
  */
 import { useMemo } from "react";
 import { Pressable, SectionList, View } from "react-native";
@@ -23,9 +26,11 @@ import type {
 } from "@multica/core/types";
 import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Header } from "@/components/ui/header";
+import { TideTexture } from "@/components/ui/tide-texture";
 import { HeaderActions } from "@/components/ui/app-header-actions";
+import { SplitPane } from "@/components/ui/split-pane";
+import { IssueDetailPane } from "@/components/issue/issue-detail-pane";
 import { StatusIcon } from "@/components/ui/status-icon";
 import { IssueRow } from "@/components/issue/issue-row";
 import { IssuesLoading } from "@/components/issue/issues-loading";
@@ -40,11 +45,13 @@ import { useMyIssuesViewStore } from "@/data/stores/my-issues-view-store";
 import { useClearFiltersOnWorkspaceChange } from "@/lib/use-clear-filters-on-workspace-change";
 import { PRIORITY_LABEL } from "@/lib/issue-status";
 import { useT } from "@/lib/i18n";
+import { useIssuePane } from "@/lib/use-issue-pane";
 import { useIssueStatuses } from "@/lib/use-issue-statuses";
 import { groupIssuesByStatus } from "@/lib/group-issues-by-status";
 import { filterIssues } from "@/lib/filter-issues";
 import { useColorScheme } from "@/lib/use-color-scheme";
 import { THEME } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 
 // Mobile pill row has tight width on SE3 (375pt). Three pills + Filter icon
 // must fit in 343pt usable space, so the agents scope renders "Agents" — the
@@ -108,141 +115,104 @@ export default function MyIssues() {
     label: t(`tabs.${value}`),
   }));
 
-  const showEmptyState =
-    !isLoading && !error && filtered.length === 0;
+  const loadFailed = !!error && !data;
+  const pane = useIssuePane("mine");
 
   return (
     <View className="flex-1 bg-background">
-      <Header title={t("navigation:tabs.my_issues")} right={<HeaderActions />} />
-      <ScopeToolbar
-        scopes={scopeItems}
-        scope={scope}
-        onChange={(v) => setScope(v)}
-        onOpenFilter={openFilter}
-        hasActiveFilters={hasActiveFilters}
+      <TideTexture height={420} />
+      <SplitPane
+        split={pane.split}
+        detail={<IssueDetailPane surface="mine" />}
+        list={
+          <>
+            <Header
+              title={t("navigation:tabs.my_issues")}
+              count={data ? String(filtered.length) : undefined}
+              right={<HeaderActions />}
+            />
+            <ScopeToolbar
+              scopes={scopeItems}
+              scope={scope}
+              onChange={(v) => setScope(v)}
+              onOpenFilter={openFilter}
+              hasActiveFilters={hasActiveFilters}
+              dense={pane.split}
+            />
+            {hasActiveFilters ? (
+              <ActiveFilterChips
+                statusFilters={statusFilters}
+                priorityFilters={priorityFilters}
+                statusLabelOf={catalog.labelOf}
+                onClearStatus={(s) =>
+                  useMyIssuesViewStore.getState().toggleStatusFilter(s)
+                }
+                onClearPriority={(p) =>
+                  useMyIssuesViewStore.getState().togglePriorityFilter(p)
+                }
+              />
+            ) : null}
+            {isLoading ? (
+              <IssuesLoading />
+            ) : (
+              // One list for rows, the empty state and the load error, so each of
+              // them can be pulled to refresh. The error only shows with no data.
+              <SectionList
+                sections={loadFailed ? [] : sections}
+                keyExtractor={(item) => item.id}
+                extraData={pane.selectedId}
+                stickySectionHeadersEnabled={false}
+                renderSectionHeader={({ section }) => (
+                  <SectionHeader
+                    status={section.status}
+                    count={section.data.length}
+                  />
+                )}
+                contentContainerStyle={{ flexGrow: 1, paddingBottom: 24 }}
+                renderItem={({ item }) => (
+                  <IssueRow
+                    issue={item}
+                    stacked={pane.split}
+                    selected={item.id === pane.selectedId}
+                    onPress={() => {
+                      if (pane.select({ issueId: item.id })) return;
+                      if (wsSlug) router.push(`/${wsSlug}/issue/${item.id}`);
+                    }}
+                  />
+                )}
+                ListEmptyComponent={
+                  loadFailed ? (
+                    <ListMessage
+                      message={t("errors.load_failed", {
+                        message: error instanceof Error ? error.message : "unknown",
+                      })}
+                      onRetry={() => refetch()}
+                    />
+                  ) : (
+                    <ListMessage
+                      message={
+                        hasActiveFilters ? t("empty.filtered") : t(`empty.${scope}`)
+                      }
+                    />
+                  )
+                }
+                refreshing={isFocused && isRefetching}
+                onRefresh={refetch}
+              />
+            )}
+          </>
+        }
       />
-      {hasActiveFilters ? (
-        <ActiveFilterChips
-          statusFilters={statusFilters}
-          priorityFilters={priorityFilters}
-          statusLabelOf={catalog.labelOf}
-          statusColorOf={catalog.colorOf}
-          onClearStatus={(s) =>
-            useMyIssuesViewStore.getState().toggleStatusFilter(s)
-          }
-          onClearPriority={(p) =>
-            useMyIssuesViewStore.getState().togglePriorityFilter(p)
-          }
-        />
-      ) : null}
-      {isLoading ? (
-        <IssuesLoading />
-      ) : error ? (
-        <View className="px-4 gap-3 pt-4">
-          <Text className="text-sm text-destructive">
-            {t("errors.load_failed", {
-              message: error instanceof Error ? error.message : "unknown",
-            })}
-          </Text>
-          <Button variant="outline" onPress={() => refetch()}>
-            <Text>{t("common:actions.retry")}</Text>
-          </Button>
-        </View>
-      ) : showEmptyState ? (
-        <EmptyState
-          message={
-            hasActiveFilters
-              ? t("empty.filtered")
-              : t(`empty.${scope}`)
-          }
-        />
-      ) : (
-        <SectionList
-          sections={sections}
-          keyExtractor={(item) => item.id}
-          stickySectionHeadersEnabled={false}
-          ItemSeparatorComponent={() => (
-            <View className="h-px bg-border ml-4" />
-          )}
-          renderSectionHeader={({ section }) => (
-            <SectionHeader
-              status={section.status}
-              count={section.data.length}
-            />
-          )}
-          contentContainerClassName="pb-6"
-          renderItem={({ item }) => (
-            <IssueRow
-              issue={item}
-              onPress={() => {
-                if (wsSlug) router.push(`/${wsSlug}/issue/${item.id}`);
-              }}
-            />
-          )}
-          refreshing={isFocused && isRefetching}
-          onRefresh={refetch}
-        />
-      )}
-
     </View>
   );
 }
 
 /**
- * Outline icon button matching the scope switch height so the toolbar row
- * reads as one visual group. Mirrors web `IssuesHeader` / `MyIssuesHeader`
- * filter trigger (`packages/views/my-issues/components/my-issues-header.tsx:174`),
- * which is also `variant="outline"` + icon-sized — NOT the ghost-style we'd
- * get from <IconButton>. Square (`w-9`) with `px-0` to suppress the sm
- * default `px-3`.
- */
-function FilterButton({
-  onPress,
-  hasActiveFilters,
-}: {
-  onPress: () => void;
-  hasActiveFilters: boolean;
-}) {
-  const { t } = useT("issues");
-  const { colorScheme } = useColorScheme();
-  return (
-    <View style={{ position: "relative" }} className="ml-1">
-      <Button
-        variant="outline"
-        size="sm"
-        onPress={onPress}
-        hitSlop={4}
-        accessibilityLabel={t("header_filter")}
-        className="w-9 px-0"
-      >
-        <Ionicons
-          name="options-outline"
-          size={16}
-          color={THEME[colorScheme].mutedForeground}
-        />
-      </Button>
-      {hasActiveFilters ? (
-        <View
-          pointerEvents="none"
-          className="absolute top-1 right-1 size-1.5 rounded-full bg-brand"
-        />
-      ) : null}
-    </View>
-  );
-}
-
-/**
- * Toolbar row mirroring web `MyIssuesHeader` / `IssuesHeader`
- * (`packages/views/my-issues/components/my-issues-header.tsx:138-163`):
- * left-aligned scope switch + right-side Filter icon (brand dot when filters
- * are active). Replaces the previous full-width segmented tabs +
- * Filter-in-title-bar split — keeps scope and the filter affordance in the
- * same row, because they both control the list directly below.
- *
- * The switch wears the same quiet chrome as `SegmentedControl` (secondary
- * track, page-background segment with a hairline) so the scope picker reads
- * identically to the inbox's section switch on the next tab. It is intrinsic
- * width rather than full-width because the filter trigger shares the row.
+ * Toolbar under the header: the scope picker (DESIGN.md "Segmented picker" —
+ * a `bg-secondary` track, 3dp padding, 38dp segments, the selected one a step
+ * lighter with foreground ink) and the filter trigger on the same row,
+ * because both control the list directly below. The picker is intrinsic
+ * width so the trigger keeps its place on a narrow cover screen.
  */
 function ScopeToolbar<S extends string>({
   scopes,
@@ -250,17 +220,20 @@ function ScopeToolbar<S extends string>({
   onChange,
   onOpenFilter,
   hasActiveFilters,
+  dense,
 }: {
   scopes: { value: S; label: string }[];
   scope: S;
   onChange: (value: S) => void;
   onOpenFilter: () => void;
   hasActiveFilters: boolean;
+  /** Tighter segments for the ~300dp list column of a list + detail split. */
+  dense: boolean;
 }) {
   return (
-    <View className="flex-row items-center justify-between gap-2 px-4 pt-4 pb-2">
+    <View className="flex-row items-center justify-between gap-2 pb-2 pl-5 pr-2 pt-1">
       <View
-        className="flex-row items-center gap-1 shrink min-w-0 rounded-lg bg-secondary p-1"
+        className="min-w-0 shrink flex-row rounded-lg bg-secondary p-[3px]"
         accessibilityRole="tablist"
       >
         {scopes.map((s) => {
@@ -271,15 +244,21 @@ function ScopeToolbar<S extends string>({
               onPress={() => onChange(s.value)}
               accessibilityRole="tab"
               accessibilityState={{ selected: active }}
-              className={`h-8 flex-row items-center justify-center rounded-md px-3 ${
-                active ? "bg-background border border-border" : ""
-              }`}
+              hitSlop={{ top: 3, bottom: 3 }}
+              className={cn(
+                "h-[38px] min-w-11 shrink items-center justify-center rounded-lg",
+                dense ? "px-2" : "px-3",
+                active && "bg-background dark:bg-surface-2",
+              )}
             >
               <Text
                 numberOfLines={1}
-                className={`text-[13px] ${
-                  active ? "text-foreground font-medium" : "text-muted-foreground"
-                }`}
+                className={cn(
+                  "text-[13px]",
+                  active
+                    ? "font-semibold text-foreground"
+                    : "text-muted-foreground",
+                )}
               >
                 {s.label}
               </Text>
@@ -295,11 +274,42 @@ function ScopeToolbar<S extends string>({
   );
 }
 
+/** 48dp icon button; a vermilion dot marks that filters are narrowing the list. */
+function FilterButton({
+  onPress,
+  hasActiveFilters,
+}: {
+  onPress: () => void;
+  hasActiveFilters: boolean;
+}) {
+  const { t } = useT("issues");
+  const { colorScheme } = useColorScheme();
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={t("header_filter")}
+      className="size-12 items-center justify-center rounded-lg active:bg-secondary"
+    >
+      <Ionicons
+        name="options-outline"
+        size={20}
+        color={THEME[colorScheme].foreground}
+      />
+      {hasActiveFilters ? (
+        <View
+          pointerEvents="none"
+          className="absolute right-2.5 top-2.5 size-2 rounded-full bg-primary"
+        />
+      ) : null}
+    </Pressable>
+  );
+}
+
 function ActiveFilterChips({
   statusFilters,
   priorityFilters,
   statusLabelOf,
-  statusColorOf,
   onClearStatus,
   onClearPriority,
 }: {
@@ -307,19 +317,16 @@ function ActiveFilterChips({
   priorityFilters: IssuePriority[];
   /** Resolves a status KEY — which can be a custom one — to its label. */
   statusLabelOf: (statusKey: string) => string;
-  /** Catalog colour for a custom status; null keeps the badge toneless. */
-  statusColorOf: (statusKey: string) => string | null;
   onClearStatus: (s: IssueStatus) => void;
   onClearPriority: (p: IssuePriority) => void;
 }) {
   const { t } = useT("issues");
   return (
-    <View className="flex-row flex-wrap items-center gap-1.5 px-4 pb-2">
+    <View className="flex-row flex-wrap items-center gap-2 px-5 pb-2">
       {statusFilters.map((s) => (
         <Chip
           key={`s-${s}`}
           label={statusLabelOf(s)}
-          dotColor={statusColorOf(s)}
           onClear={() => onClearStatus(s)}
         />
       ))}
@@ -327,7 +334,6 @@ function ActiveFilterChips({
         <Chip
           key={`p-${p}`}
           label={t(PRIORITY_LABEL[p])}
-          dotColor={null}
           onClear={() => onClearPriority(p)}
         />
       ))}
@@ -335,44 +341,29 @@ function ActiveFilterChips({
   );
 }
 
-/** Dismissible filter chip on the shared Badge surface — one height, one radius. */
-function Chip({
-  label,
-  dotColor,
-  onClear,
-}: {
-  label: string;
-  dotColor: string | null;
-  onClear: () => void;
-}) {
+/** Dismissible filter chip: a hairline outline, no fill; tap to clear. */
+function Chip({ label, onClear }: { label: string; onClear: () => void }) {
   const { colorScheme } = useColorScheme();
   return (
     <Pressable
       onPress={onClear}
-      hitSlop={10}
+      hitSlop={8}
       accessibilityRole="button"
       accessibilityLabel={label}
+      className="h-7 flex-row items-center gap-1.5 rounded-lg border border-border pl-2.5 pr-2 active:bg-secondary"
     >
-      <Badge variant="secondary" className="gap-1.5 pr-1.5">
-        {dotColor ? (
-          <View
-            className="size-1.5 rounded-full"
-            style={{ backgroundColor: dotColor }}
-          />
-        ) : null}
-        <Badge.Text>{label}</Badge.Text>
-        <Ionicons
-          name="close"
-          size={12}
-          color={THEME[colorScheme].mutedForeground}
-        />
-      </Badge>
+      <Text className="text-[13px] text-foreground">{label}</Text>
+      <Ionicons
+        name="close"
+        size={14}
+        color={THEME[colorScheme].mutedForeground}
+      />
     </Pressable>
   );
 }
 
-// The section header names its concrete built-in or custom status. Sentence
-// case, 11px muted, count as quiet tabular metadata — never a pill.
+// DESIGN.md "Group header": a 44dp row with a top hairline — the concrete
+// (built-in or custom) status name at 13/600, then its count in mono.
 function SectionHeader({
   status,
   count,
@@ -382,23 +373,45 @@ function SectionHeader({
 }) {
   const catalog = useIssueStatuses();
   return (
-    <View className="flex-row items-center gap-2 px-4 pt-4 pb-1.5">
+    <View className="h-11 flex-row items-center gap-2.5 border-t border-border px-5">
       {/* Category keys resolve to their canonical lifecycle glyph. */}
-      <StatusIcon status={status} category={catalog.categoryOf(status)} icon={catalog.iconOf(status)} color={catalog.colorOf(status)} size={12} />
-      <Text className="text-[11px] font-medium text-muted-foreground">
+      <StatusIcon
+        status={status}
+        category={catalog.categoryOf(status)}
+        icon={catalog.iconOf(status)}
+        color={catalog.colorOf(status)}
+        size={14}
+      />
+      <Text className="text-[13px] font-semibold text-foreground">
         {catalog.labelOf(status)}
       </Text>
-      <Text className="text-[11px] tabular-nums text-muted-foreground/60">{count}</Text>
+      <Text className="font-mono text-xs text-muted-foreground">{count}</Text>
     </View>
   );
 }
 
-function EmptyState({ message }: { message: string }) {
+function ListMessage({
+  message,
+  onRetry,
+}: {
+  message: string;
+  onRetry?: () => void;
+}) {
+  const { t } = useT("issues");
   return (
-    <View className="flex-1 items-center justify-center px-8">
-      <Text className="text-sm text-muted-foreground text-center leading-[19px]">
+    <View className="gap-3 px-5 pt-6">
+      <Text className="text-[15px] leading-[21px] text-muted-foreground">
         {message}
       </Text>
+      {onRetry ? (
+        <Button
+          variant="outline"
+          className="min-h-11 self-start"
+          onPress={onRetry}
+        >
+          <Text>{t("common:actions.retry")}</Text>
+        </Button>
+      ) : null}
     </View>
   );
 }

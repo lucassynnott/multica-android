@@ -1,5 +1,5 @@
 /**
- * Agent picker — bottom Modal listing agents the current user can assign /
+ * Agent picker — Modal listing agents the current user can assign /
  * chat with. Shown when the user taps `+ New Chat` and the workspace has
  * more than one usable agent; with exactly one, the chat screen skips this
  * sheet and goes straight to the blank state for that agent.
@@ -8,10 +8,8 @@
  * `agents` list) so the same filter logic — archived + canAssignAgentToIssue
  * + order — stays in one place.
  *
- * Layout mirrors `components/issue/my-issues-filter-sheet.tsx`: transparent
- * Modal + dimmed backdrop + centered card. Bottom-sheet anchoring would be
- * nicer but the current codebase doesn't pull in a bottom-sheet lib and
- * centered cards already work well on iOS.
+ * Layout: transparent Modal + dimmed backdrop + one centred panel of
+ * hairline-separated rows (agent tile, name, description).
  */
 import { Modal, Pressable, ScrollView, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -20,7 +18,6 @@ import { Text } from "@/components/ui/text";
 import { ActorAvatar } from "@/components/ui/actor-avatar";
 import { cn } from "@/lib/utils";
 import { isAgentRuntimeBound } from "@/lib/is-agent-runtime-bound";
-import { continuousCorners } from "@/lib/radius";
 import { useT } from "@/lib/i18n";
 import { useColorScheme } from "@/lib/use-color-scheme";
 import { THEME } from "@/lib/theme";
@@ -42,7 +39,7 @@ export function AgentPickerSheet({
 }: Props) {
   const { t } = useT("chat");
   const { colorScheme } = useColorScheme();
-  const mutedFg = THEME[colorScheme].mutedForeground;
+  const foreground = THEME[colorScheme].foreground;
 
   return (
     <Modal
@@ -51,28 +48,28 @@ export function AgentPickerSheet({
       animationType="fade"
       onRequestClose={onClose}
     >
-      <Pressable className="flex-1 bg-black/40" onPress={onClose}>
-        <View className="flex-1 items-center justify-center px-6">
+      <Pressable className="flex-1 bg-black/60" onPress={onClose}>
+        <View className="flex-1 items-center justify-center px-5">
           <Pressable onPress={() => {}} className="w-full max-w-sm">
-            <View
-              className="overflow-hidden rounded-xl border border-border bg-popover"
-              style={continuousCorners}
-            >
-              <View className="px-4 py-3 border-b border-border">
-                <Text className="text-base font-semibold text-foreground">
+            <View className="overflow-hidden rounded-lg border border-border bg-card">
+              <View className="min-h-12 justify-center border-b border-border px-5">
+                <Text
+                  role="heading"
+                  className="text-[15px] font-semibold text-foreground"
+                >
                   {t("picker.title")}
                 </Text>
               </View>
 
               <ScrollView className="max-h-96">
                 {agents.length === 0 ? (
-                  <View className="px-4 py-8">
-                    <Text className="text-sm text-muted-foreground text-center">
+                  <View className="px-5 py-8">
+                    <Text className="text-center text-[13px] text-muted-foreground">
                       {t("picker.empty")}
                     </Text>
                   </View>
                 ) : (
-                  agents.map((agent) => {
+                  agents.map((agent, index) => {
                     const selected = agent.id === currentAgentId;
                     const runtimeBound = isAgentRuntimeBound(agent);
                     return (
@@ -83,23 +80,36 @@ export function AgentPickerSheet({
                           onPick(agent);
                           onClose();
                         }}
+                        accessibilityRole="button"
+                        accessibilityState={{
+                          selected,
+                          disabled: !runtimeBound,
+                        }}
                         className={cn(
-                          "flex-row items-center gap-3 px-4 py-3 active:bg-secondary",
-                          selected && "bg-secondary/60",
+                          "min-h-14 flex-row items-center gap-3 px-5 py-2.5 active:bg-secondary",
+                          index > 0 && "border-t border-border",
                           !runtimeBound && "opacity-50",
                         )}
                       >
-                        <ActorAvatar type="agent" id={agent.id} size={32} showPresence />
+                        <ActorAvatar
+                          type="agent"
+                          id={agent.id}
+                          size={32}
+                          showPresence
+                        />
                         <View className="flex-1">
                           <Text
-                            className="text-sm font-medium text-foreground"
+                            className={cn(
+                              "text-[15px] leading-[21px] text-foreground",
+                              selected && "font-semibold",
+                            )}
                             numberOfLines={1}
                           >
                             {agent.name}
                           </Text>
                           {agent.description ? (
                             <Text
-                              className="text-xs text-muted-foreground mt-0.5"
+                              className="text-[13px] leading-[18px] text-muted-foreground"
                               numberOfLines={1}
                             >
                               {agent.description}
@@ -107,12 +117,16 @@ export function AgentPickerSheet({
                           ) : null}
                         </View>
                         {!runtimeBound ? (
-                          <Text className="text-xs font-medium text-warning">
+                          <Text className="font-mono text-xs text-muted-foreground">
                             {t("picker.needs_runtime")}
                           </Text>
                         ) : null}
                         {selected ? (
-                          <Ionicons name="checkmark" size={18} color={mutedFg} />
+                          <Ionicons
+                            name="checkmark"
+                            size={18}
+                            color={foreground}
+                          />
                         ) : null}
                       </Pressable>
                     );

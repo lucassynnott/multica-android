@@ -42,6 +42,14 @@ export function useMyIssuesRealtime() {
         // in — we don't need to read the payload, just refetch.
         ws.on("issue:created", () => invalidateMyAll()),
         ws.on("issue:updated", (payload) => {
+          // A reassignment changes which scopes the issue belongs to, and a
+          // patch can only touch rows already cached: an issue newly assigned
+          // to this user is in none of them, and one assigned away would keep
+          // its row. Membership is the server's call, so refetch.
+          if (payload.assignee_changed) {
+            void invalidateMyAll();
+            return;
+          }
           patchMyIssuesList(qc, wsId, payload.issue);
         }),
         ws.on("issue:deleted", (payload) => {

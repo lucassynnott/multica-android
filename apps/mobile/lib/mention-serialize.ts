@@ -150,13 +150,13 @@ export function serializeMentions(
       continue;
     }
 
-    // Read the word after `@` until whitespace or end-of-text.
-    let wordEnd = sentinelAt + 2;
-    while (wordEnd < text.length && !/\s/.test(text[wordEnd]!)) wordEnd++;
-    const word = text.slice(sentinelAt + 2, wordEnd);
-
+    // Match the marker's own name after `@`, not "the next word": display
+    // names contain spaces ("Johnny Silverhand"), and reading up to the
+    // first whitespace made every such mention mismatch, which aborted the
+    // whole serialisation and downgraded all mentions to plain text.
     const marker = markers[markerIndex];
-    if (!marker || marker.name !== word) {
+    const wordEnd = sentinelAt + 2 + (marker?.name.length ?? 0);
+    if (!marker || !text.startsWith(marker.name, sentinelAt + 2)) {
       // Marker exhausted or word doesn't match — abort and fallback.
       abort = true;
       break;

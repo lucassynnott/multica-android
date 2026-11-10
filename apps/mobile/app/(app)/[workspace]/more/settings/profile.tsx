@@ -187,11 +187,16 @@ export default function ProfileSettingsScreen() {
   return (
     <ScrollView
       className="flex-1 bg-background"
-      contentContainerClassName="px-4 pt-4 pb-6"
+      contentContainerClassName="px-5 pt-5 pb-6"
       keyboardShouldPersistTaps="handled"
     >
       <View className="items-center gap-2">
-        <Pressable onPress={handleAvatarPick} disabled={uploading}>
+        <Pressable
+          onPress={handleAvatarPick}
+          disabled={uploading}
+          accessibilityRole="button"
+          accessibilityLabel={t("avatar.change_hint")}
+        >
           <Avatar alt={user?.name ?? t("profile.name")} className="size-24">
             {user?.avatar_url ? (
               <AvatarImage source={{ uri: user.avatar_url }} />
@@ -206,15 +211,15 @@ export default function ProfileSettingsScreen() {
         {uploading ? (
           <ActivityIndicator />
         ) : (
-          <Text className="text-xs text-muted-foreground">
+          <Text className="text-[13px] text-muted-foreground">
             {t("avatar.change_hint")}
           </Text>
         )}
       </View>
 
-      <View className="mt-6 gap-2">
+      <View className="mt-6 gap-4">
         <View>
-          <Text className="mb-2 text-xs font-medium text-muted-foreground">
+          <Text className="mb-2 text-[13px] font-semibold text-muted-foreground">
             {t("profile.name")}
           </Text>
           <TextField
@@ -224,19 +229,21 @@ export default function ProfileSettingsScreen() {
             autoCapitalize="words"
             autoCorrect={false}
             returnKeyType="done"
-            className="h-9"
           />
         </View>
         <View>
-          <Text className="mb-2 text-xs font-medium text-muted-foreground">
+          <Text className="mb-2 text-[13px] font-semibold text-muted-foreground">
             {t("profile.email")}
           </Text>
-          <View className="h-9 justify-center rounded-md border border-input bg-muted/50 px-3">
-            <Text className="text-sm text-muted-foreground" numberOfLines={1}>
+          <View className="h-11 justify-center rounded-lg border border-border px-3">
+            <Text
+              className="font-mono text-[13px] text-muted-foreground"
+              numberOfLines={1}
+            >
               {user?.email ?? "—"}
             </Text>
           </View>
-          <Text className="mt-1.5 text-xs text-muted-foreground">
+          <Text className="mt-1.5 text-[13px] text-muted-foreground">
             {t("email_fixed")}
           </Text>
         </View>

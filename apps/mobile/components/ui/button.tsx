@@ -3,9 +3,18 @@ import { cn } from '@/lib/utils';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { Platform, Pressable } from 'react-native';
 
+/**
+ * Graphite button. One radius (`rounded-lg`), no shadows, and only the
+ * `default` variant is filled with the accent: it is the primary action of a
+ * screen. `destructive` is accent-coloured text on a hairline outline rather
+ * than a red fill, because vermilion is the app's single colour.
+ *
+ * Heights meet the 44dp touch target (`default`, `lg`, `icon`); `sm` is a
+ * 36dp box that the component pads out to 44dp with `hitSlop`.
+ */
 const buttonVariants = cva(
   cn(
-    'group shrink-0 flex-row items-center justify-center gap-2 rounded-md shadow-none',
+    'group shrink-0 flex-row items-center justify-center gap-2 rounded-lg shadow-none',
     Platform.select({
       web: "focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive whitespace-nowrap outline-none transition-all focus-visible:ring-[3px] disabled:pointer-events-none [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
     })
@@ -14,36 +23,36 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default: cn(
-          'bg-primary active:bg-primary/90 shadow-sm shadow-black/5',
+          'bg-primary active:bg-primary/90',
           Platform.select({ web: 'hover:bg-primary/90' })
         ),
         destructive: cn(
-          'bg-destructive active:bg-destructive/90 dark:bg-destructive/60 shadow-sm shadow-black/5',
+          'border border-border bg-transparent active:bg-secondary',
           Platform.select({
             web: 'hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40',
           })
         ),
         outline: cn(
-          'border-border bg-background active:bg-accent dark:bg-input/30 dark:border-input dark:active:bg-input/50 border shadow-sm shadow-black/5',
+          'border border-border bg-transparent active:bg-secondary',
           Platform.select({
             web: 'hover:bg-accent dark:hover:bg-input/50',
           })
         ),
         secondary: cn(
-          'bg-secondary active:bg-secondary/80 shadow-sm shadow-black/5',
+          'bg-secondary active:bg-secondary/80',
           Platform.select({ web: 'hover:bg-secondary/80' })
         ),
         ghost: cn(
-          'active:bg-accent dark:active:bg-accent/50',
-          Platform.select({ web: 'hover:bg-accent dark:hover:bg-accent/50' })
+          'active:bg-secondary',
+          Platform.select({ web: 'hover:bg-secondary' })
         ),
         link: '',
       },
       size: {
-        default: cn('h-9 px-4', Platform.select({ web: "has-[>svg]:px-3" })),
-        sm: cn('h-8 gap-1.5 px-3', Platform.select({ web: "has-[>svg]:px-2.5" })),
-        lg: cn('h-10 px-6', Platform.select({ web: "has-[>svg]:px-4" })),
-        icon: 'h-9 w-9',
+        default: cn('h-11 px-4', Platform.select({ web: "has-[>svg]:px-3" })),
+        sm: cn('h-9 gap-1.5 px-3', Platform.select({ web: "has-[>svg]:px-2.5" })),
+        lg: cn('h-12 px-6', Platform.select({ web: "has-[>svg]:px-4" })),
+        icon: 'h-12 w-12',
       },
     },
     defaultVariants: {
@@ -55,20 +64,17 @@ const buttonVariants = cva(
 
 const buttonTextVariants = cva(
   cn(
-    'text-foreground text-sm font-medium',
+    'text-foreground text-[15px] leading-[21px] font-semibold',
     Platform.select({ web: 'pointer-events-none transition-colors' })
   ),
   {
     variants: {
       variant: {
         default: 'text-primary-foreground',
-        destructive: 'text-white',
-        outline: cn(
-          'group-active:text-accent-foreground',
-          Platform.select({ web: 'group-hover:text-accent-foreground' })
-        ),
+        destructive: 'text-destructive',
+        outline: '',
         secondary: 'text-secondary-foreground',
-        ghost: 'group-active:text-accent-foreground',
+        ghost: '',
         link: cn(
           'text-primary group-active:underline',
           Platform.select({ web: 'underline-offset-4 hover:underline group-hover:underline' })
@@ -76,7 +82,7 @@ const buttonTextVariants = cva(
       },
       size: {
         default: '',
-        sm: '',
+        sm: 'text-[13px] leading-[18px]',
         lg: '',
         icon: '',
       },
@@ -96,6 +102,9 @@ function Button({ className, variant, size, ...props }: ButtonProps) {
       <Pressable
         className={cn(props.disabled && 'opacity-50', buttonVariants({ variant, size }), className)}
         role="button"
+        // `sm` is a 36dp box; pad the touch area out to 44dp. A caller's own
+        // `hitSlop` still wins through the spread below.
+        hitSlop={size === 'sm' ? 4 : undefined}
         {...props}
       />
     </TextClassContext.Provider>

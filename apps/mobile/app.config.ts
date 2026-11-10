@@ -22,7 +22,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         ? "Multica (Staging)"
         : "Multica (Dev)",
     slug: "multica-mobile",
-    version: "0.1.0",
+    version: "1.1.0",
     // Foldables (Galaxy Z Fold 8) and tablets need the full orientation set;
     // the unfolded 4:3 canvas is used in both landscape and portrait.
     orientation: "default",
@@ -31,6 +31,9 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     // Android: built in-repo for the Z Fold 8 target. Package ids mirror the
     // iOS variant scheme so dev/staging/prod installs can coexist.
     android: {
+      // Monotonic; Android refuses to install an APK over a higher code.
+      // v1.0.0 shipped with the default (1).
+      versionCode: 2,
       package: isProd
         ? "ai.multica.mobile"
         : isStaging
@@ -94,6 +97,45 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       // MULTICA_UPLOAD_* env vars. See plugins/with-release-signing.js.
       "./plugins/with-release-signing",
       "expo-router",
+      // Schibsted Grotesk (UI) and JetBrains Mono (identifiers, counts, the
+      // background texture). Declared as native families with per-weight
+      // files so `fontFamily` + `fontWeight` pick the real cut on Android
+      // instead of synthesising bold from Regular.
+      [
+        "expo-font",
+        {
+          android: {
+            fonts: [
+              {
+                fontFamily: "Schibsted Grotesk",
+                fontDefinitions: [
+                  { path: "./assets/fonts/SchibstedGrotesk_400Regular.ttf", weight: 400 },
+                  { path: "./assets/fonts/SchibstedGrotesk_500Medium.ttf", weight: 500 },
+                  { path: "./assets/fonts/SchibstedGrotesk_600SemiBold.ttf", weight: 600 },
+                  { path: "./assets/fonts/SchibstedGrotesk_700Bold.ttf", weight: 700 },
+                ],
+              },
+              {
+                fontFamily: "JetBrains Mono",
+                fontDefinitions: [
+                  { path: "./assets/fonts/JetBrainsMono_400Regular.ttf", weight: 400 },
+                  { path: "./assets/fonts/JetBrainsMono_500Medium.ttf", weight: 500 },
+                ],
+              },
+            ],
+          },
+          ios: {
+            fonts: [
+              "./assets/fonts/SchibstedGrotesk_400Regular.ttf",
+              "./assets/fonts/SchibstedGrotesk_500Medium.ttf",
+              "./assets/fonts/SchibstedGrotesk_600SemiBold.ttf",
+              "./assets/fonts/SchibstedGrotesk_700Bold.ttf",
+              "./assets/fonts/JetBrainsMono_400Regular.ttf",
+              "./assets/fonts/JetBrainsMono_500Medium.ttf",
+            ],
+          },
+        },
+      ],
       "expo-image",
       "expo-localization",
       "expo-secure-store",

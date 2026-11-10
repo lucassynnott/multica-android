@@ -1,55 +1,40 @@
 /**
- * Settings page — account info, workspace switching, appearance, profile and
- * notifications subscreens, and sign out.
- *
- * Inherits the responsibilities the old More tab carried (account row,
- * workspace list, sign-out button) now that the More tab is gone and global
- * navigation lives in GlobalNavMenu.
+ * Settings page — profile, notification routing, workspace switching,
+ * language, and sign out. Reached from the account row on the More tab.
  *
  * Subscreens push under more/settings/:
  *   - more/settings/profile        — edit name + avatar
  *   - more/settings/notifications  — Inbox routing per kind + system toggle
  *
- * Theme picker stays inline (3 fixed options, fits in one section).
+ * Appearance (theme, background texture) lives on the More tab, not here:
+ * `useColorScheme` keeps the chosen preference in per-screen state, so two
+ * mounted screens that both edit it would show each other a stale value.
+ *
+ * Graphite row language: plain 52dp rows with hairlines and 13/600 section
+ * labels, no cards around the groups (`components/ui/list-row.tsx`).
  */
-import { Alert, ActivityIndicator, Pressable, ScrollView, View } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Alert, ActivityIndicator, ScrollView, View } from "react-native";
 import { router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import type { Workspace } from "@multica/core/types";
 import { Text } from "@/components/ui/text";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ListRow, ListSectionLabel } from "@/components/ui/list-row";
+import { ActorAvatar } from "@/components/ui/actor-avatar";
+import { PlatformIcon } from "@/components/ui/platform-icon";
+import { WorkspaceAvatar } from "@/components/workspace/workspace-avatar";
 import { workspaceListOptions } from "@/data/queries/workspaces";
 import { useAuthStore } from "@/data/auth-store";
 import { useWorkspaceStore } from "@/data/workspace-store";
-import {
-  useColorScheme,
-  type ThemePreference,
-} from "@/lib/use-color-scheme";
+import { useColorScheme } from "@/lib/use-color-scheme";
 import { THEME } from "@/lib/theme";
 import { useLocalePreference, useT, type LocalePreference } from "@/lib/i18n";
 
-const THEME_OPTIONS: ThemePreference[] = ["light", "dark", "system"];
 const LANGUAGE_OPTIONS: LocalePreference[] = [
   "system",
   "en",
   "zh-Hans",
   "zh-Hant",
 ];
-
-function initialsOf(name: string | undefined): string {
-  if (!name) return "?";
-  return name
-    .split(" ")
-    .map((w) => w[0])
-    .filter(Boolean)
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
-}
 
 export default function SettingsPage() {
   const user = useAuthStore((s) => s.user);
@@ -58,14 +43,14 @@ export default function SettingsPage() {
   const setCurrentWorkspace = useWorkspaceStore((s) => s.setCurrentWorkspace);
   const clearWorkspace = useWorkspaceStore((s) => s.clear);
   const { data, isLoading, error } = useQuery(workspaceListOptions());
-  const { preference, setPreference, colorScheme } = useColorScheme();
+  const { colorScheme } = useColorScheme();
   const {
     preference: localePreference,
     setPreference: setLocalePreference,
   } = useLocalePreference();
   const { t } = useT("settings");
   const { t: tCommon } = useT();
-  const mutedFg = THEME[colorScheme].mutedForeground;
+  const theme = THEME[colorScheme];
   const localeLabels = {
     system: t("language.system"),
     en: t("language.english"),
@@ -102,216 +87,95 @@ export default function SettingsPage() {
     router.push(`/${currentSlug}/more/settings/notifications`);
 
   return (
-    <ScrollView
-      className="flex-1 bg-background"
-      contentContainerClassName="px-4 pt-4 pb-6 gap-4"
-    >
-      <SectionGroup title={t("account.title")}>
-        <NavRow
-          onPress={goProfile}
-          chevronColor={mutedFg}
-          leading={
-            <Avatar alt={user?.name ?? t("profile.name")} className="size-10">
-              {user?.avatar_url ? (
-                <AvatarImage source={{ uri: user.avatar_url }} />
-              ) : null}
-              <AvatarFallback>
-                <Text className="text-sm font-semibold text-muted-foreground">
-                  {initialsOf(user?.name)}
-                </Text>
-              </AvatarFallback>
-            </Avatar>
-          }
-          title={user?.name ?? "—"}
-          subtitle={user?.email}
-        />
-        <Separator />
-        <NavRow
-          onPress={goNotifications}
-          chevronColor={mutedFg}
-          title={t("notifications.title")}
-          subtitle={t("account.notifications_subtitle")}
-        />
-      </SectionGroup>
+    <ScrollView className="flex-1 bg-background" contentContainerClassName="pb-6">
+      <ListSectionLabel>{t("account.title")}</ListSectionLabel>
+      <ListRow
+        onPress={goProfile}
+        leading={
+          <ActorAvatar
+            type="member"
+            id={user?.id}
+            name={user?.name ?? user?.email ?? undefined}
+            avatarUrl={user?.avatar_url ?? null}
+            size={36}
+          />
+        }
+        label={user?.name ?? "—"}
+        emphasized
+        description={user?.email}
+      />
+      <ListRow
+        onPress={goNotifications}
+        label={t("notifications.title")}
+        description={t("account.notifications_subtitle")}
+      />
 
-      <SectionGroup title={t("account.workspaces")}>
-        {isLoading ? (
-          <View className="py-4 items-center">
-            <ActivityIndicator />
-          </View>
-        ) : error ? (
-          <View className="p-4">
-            <Text className="text-sm text-destructive">
-              {t("account.load_failed")}
-            </Text>
-          </View>
-        ) : (
-          data?.map((ws, idx) => {
-            const isActive = ws.slug === currentSlug;
-            const isLast = idx === (data?.length ?? 0) - 1;
-            return (
-              <View key={ws.id}>
-                <WorkspaceRow
+      <ListSectionLabel>{t("account.workspaces")}</ListSectionLabel>
+      {isLoading ? (
+        <View className="py-4 items-center">
+          <ActivityIndicator />
+        </View>
+      ) : error ? (
+        <View className="px-5 py-3">
+          <Text className="text-[13px] text-destructive">
+            {t("account.load_failed")}
+          </Text>
+        </View>
+      ) : (
+        data?.map((ws) => {
+          const isActive = ws.slug === currentSlug;
+          return (
+            <ListRow
+              key={ws.id}
+              label={ws.name}
+              emphasized={isActive}
+              value={`/${ws.slug}`}
+              valueMono
+              leading={
+                <WorkspaceAvatar
                   name={ws.name}
-                  slug={ws.slug}
-                  isActive={isActive}
-                  iconColor={mutedFg}
-                  onPress={() => onSwitch(ws)}
+                  avatarUrl={ws.avatar_url}
+                  size={24}
                 />
-                {!isLast ? <Separator /> : null}
-              </View>
-            );
-          })
-        )}
-      </SectionGroup>
+              }
+              disabled={isActive}
+              chevron={!isActive}
+              accessibilityState={{ selected: isActive }}
+              trailing={isActive ? <Check color={theme.primary} /> : undefined}
+              onPress={() => onSwitch(ws)}
+            />
+          );
+        })
+      )}
 
-      <SectionGroup title={t("appearance.title")}>
-        {/* Two converging entry points by design, NOT a double-fire:
-              - Tap on small radio circle  → RadioGroupItem (Pressable, inner) consumes → onValueChange fires
-              - Tap on text / row padding  → outer Pressable.onPress fires
-            RN's responder system gives inner Pressable priority, so each tap
-            triggers exactly one setPreference. Both paths land at the same
-            handler intentionally — the Pressable wrapper exists only to
-            extend the tap target to the full row (iOS standard). */}
-        <RadioGroup
-          value={preference}
-          onValueChange={(v) => setPreference(v as ThemePreference)}
-          className="gap-0"
-        >
-          {THEME_OPTIONS.map((opt, idx) => {
-            const isLast = idx === THEME_OPTIONS.length - 1;
-            return (
-              <View key={opt}>
-                <Pressable
-                  onPress={() => setPreference(opt)}
-                  className="flex-row items-center px-3 py-3 active:bg-secondary gap-3"
-                >
-                  <RadioGroupItem value={opt} />
-                  <Text className="flex-1 text-sm font-medium text-foreground">
-                    {t(`appearance.${opt}`)}
-                  </Text>
-                </Pressable>
-                {!isLast ? <Separator /> : null}
-              </View>
-            );
-          })}
-        </RadioGroup>
-      </SectionGroup>
+      <ListSectionLabel>{t("language.title")}</ListSectionLabel>
+      {LANGUAGE_OPTIONS.map((opt) => {
+        const selected = opt === localePreference;
+        return (
+          <ListRow
+            key={opt}
+            label={localeLabels[opt]}
+            emphasized={selected}
+            chevron={false}
+            accessibilityState={{ selected }}
+            trailing={selected ? <Check color={theme.primary} /> : undefined}
+            onPress={() => setLocalePreference(opt)}
+          />
+        );
+      })}
 
-      <SectionGroup title={t("language.title")}>
-        <RadioGroup
-          value={localePreference}
-          onValueChange={(v) => setLocalePreference(v as LocalePreference)}
-          className="gap-0"
-        >
-          {LANGUAGE_OPTIONS.map((opt, idx) => {
-            const isLast = idx === LANGUAGE_OPTIONS.length - 1;
-            return (
-              <View key={opt}>
-                <Pressable
-                  onPress={() => setLocalePreference(opt)}
-                  className="flex-row items-center px-3 py-3 active:bg-secondary gap-3"
-                >
-                  <RadioGroupItem value={opt} />
-                  <Text className="flex-1 text-sm font-medium text-foreground">
-                    {localeLabels[opt]}
-                  </Text>
-                </Pressable>
-                {!isLast ? <Separator /> : null}
-              </View>
-            );
-          })}
-        </RadioGroup>
-      </SectionGroup>
-
-      <View className="pt-2">
-        <Button variant="destructive" onPress={onSignOut}>
-          <Text>{t("account.sign_out")}</Text>
-        </Button>
-      </View>
+      <ListRow
+        className="mt-5 border-t"
+        label={t("account.sign_out")}
+        destructive
+        chevron={false}
+        onPress={onSignOut}
+      />
     </ScrollView>
   );
 }
 
-function NavRow({
-  onPress,
-  leading,
-  title,
-  subtitle,
-  chevronColor,
-}: {
-  onPress: () => void;
-  leading?: React.ReactNode;
-  title: string;
-  subtitle?: string;
-  chevronColor: string;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      className="flex-row items-center px-3 py-3 active:bg-secondary gap-3"
-    >
-      {leading}
-      <View className="flex-1">
-        <Text className="text-sm font-medium text-foreground">{title}</Text>
-        {subtitle ? (
-          <Text className="mt-0.5 text-xs text-muted-foreground">
-            {subtitle}
-          </Text>
-        ) : null}
-      </View>
-      <Ionicons name="chevron-forward" size={18} color={chevronColor} />
-    </Pressable>
-  );
-}
-
-function SectionGroup({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <View className="gap-2">
-      <Text className="text-[11px] font-medium text-muted-foreground">
-        {title}
-      </Text>
-      <View className="rounded-lg border border-border bg-card overflow-hidden">
-        {children}
-      </View>
-    </View>
-  );
-}
-
-function WorkspaceRow({
-  name,
-  slug,
-  isActive,
-  iconColor,
-  onPress,
-}: {
-  name: string;
-  slug: string;
-  isActive: boolean;
-  iconColor: string;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      disabled={isActive}
-      className="flex-row items-center px-3 py-3 active:bg-secondary"
-    >
-      <View className="flex-1">
-        <Text className="text-sm font-medium text-foreground">{name}</Text>
-        <Text className="text-xs text-muted-foreground mt-0.5">/{slug}</Text>
-      </View>
-      <Ionicons
-        name={isActive ? "checkmark" : "chevron-forward"}
-        size={18}
-        color={iconColor}
-      />
-    </Pressable>
-  );
+/** The current choice in a list of options: one accent check, nothing else. */
+function Check({ color }: { color: string }) {
+  return <PlatformIcon sf="checkmark" ion="checkmark" color={color} size={18} />;
 }

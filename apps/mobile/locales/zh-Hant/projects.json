@@ -64,14 +64,16 @@
     "status": "狀態",
     "priority": "優先順序",
     "lead": "負責人",
-    "unassigned": "未分配"
+    "unassigned": "未分配",
+    "assign": "指派"
   },
   "resources": {
     "title": "資源",
     "add": "新增",
     "detach_title": "移除資源？",
     "detach": "移除",
-    "empty": "尚未新增資源。"
+    "empty": "尚未新增資源。",
+    "label_placeholder": "例如：後端"
   },
   "runs": {
     "working": "處理中",

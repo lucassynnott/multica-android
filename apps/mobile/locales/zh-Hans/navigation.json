@@ -6,13 +6,16 @@
     "chat": "聊天",
     "more": "更多",
     "board": "看板",
-    "projects": "项目"
+    "projects": "项目",
+    "mine": "我的"
   },
   "more_menu": {
     "pinned": "已固定",
     "issues": "任务",
     "projects": "项目",
-    "account_settings": "账号设置"
+    "agents": "智能体",
+    "account_settings": "账号设置",
+    "notifications": "通知"
   },
   "routes": {
     "issues": "任务",

@@ -40,17 +40,24 @@ import { THEME } from "@/lib/theme";
 import { useColorScheme } from "@/lib/use-color-scheme";
 import { useT } from "@/lib/i18n";
 import {
-  CODE_BLOCK_CONTAINER_CLASS,
-  CODE_BLOCK_LANG_LABEL_CLASS,
-  CODE_BLOCK_TEXT_CLASS,
-} from "./tokens";
-import {
   highlight,
   resolveLang,
   SHIKI_THEME_DARK,
   SHIKI_THEME_LIGHT,
   type HighlightedLine,
 } from "./shiki";
+
+// Graphite code block: JetBrains Mono 13/20 on `card`, hairline border, panel
+// radius. `MD_FONT.codeBlock` and the `codeBlock` entry in markdown-style.ts
+// mirror these for list-nested code that renders through enriched-markdown —
+// keep the two in step.
+const CODE_BLOCK_CONTAINER_CLASS =
+  "bg-card border border-border rounded-lg px-3.5 py-2.5";
+const CODE_BLOCK_TEXT_CLASS =
+  "text-[13px] leading-5 font-mono text-foreground";
+// Lowercase muted mono, no `uppercase tracking-wide`: "ts" must not turn into
+// a label strip that competes with the code.
+const CODE_BLOCK_LANG_LABEL_CLASS = "font-mono text-xs text-muted-foreground";
 
 interface Props {
   code: string;
@@ -154,6 +161,9 @@ function HighlightedCode({
             : line.tokens.map((t, j) => (
                 <Text
                   key={j}
+                  // The Text primitive defaults to the UI family, which
+                  // would override the mono family of the line around it.
+                  className="font-mono"
                   style={t.color ? { color: t.color } : undefined}
                 >
                   {t.content}
@@ -194,7 +204,7 @@ function CodeBlockHeader({ code, lang }: Props) {
   };
 
   return (
-    <View className="flex-row items-center justify-between mb-1">
+    <View className="flex-row items-center justify-between mb-1.5">
       {lang ? (
         // flex-1 + mr-2 + numberOfLines guarantees the copy button never gets
         // pushed off-screen by a long language alias (e.g. `typescript-react-native`).
@@ -209,12 +219,13 @@ function CodeBlockHeader({ code, lang }: Props) {
       )}
       <Pressable
         onPress={onCopy}
-        hitSlop={8}
+        // 14dp glyph + 15dp slop on every side = a 44dp target.
+        hitSlop={15}
         accessibilityRole="button"
         accessibilityLabel={copied ? t("code.copied") : t("code.copy")}
       >
         {copied ? (
-          <CheckIcon color={theme.success} />
+          <CheckIcon color={theme.foreground} />
         ) : (
           <CopyIcon color={theme.mutedForeground} />
         )}

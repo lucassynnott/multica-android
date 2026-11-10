@@ -70,13 +70,15 @@ export function useMarkInboxRead() {
     mutationFn: (id: string) => api.markInboxRead(id),
     onMutate: async (id) => {
       const key = inboxKeys.list(wsId);
-      // Synchronous patch FIRST — see the file-level doc comment for why.
+      // Snapshot, then patch, both synchronously and before the first await
+      // — see the file-level doc comment for why the patch cannot wait.
+      // The snapshot has to come first: taken after the patch it already
+      // says `read: true`, and rolling back to it restores nothing.
+      const prev = qc.getQueryData<InboxItem[]>(key);
       qc.setQueryData<InboxItem[]>(key, (old) =>
         old?.map((item) => (item.id === id ? { ...item, read: true } : item)),
       );
-      // Then the standard cancel + snapshot dance for rollback.
       await qc.cancelQueries({ queryKey: key });
-      const prev = qc.getQueryData<InboxItem[]>(key);
       return { prev, key };
     },
     onError: (_err, _id, ctx) => {

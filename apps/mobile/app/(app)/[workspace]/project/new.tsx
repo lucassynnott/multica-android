@@ -15,7 +15,7 @@
  * On success: dismiss modal → navigate to the new project's detail page so
  * the user can immediately add a lead / attach issues / configure properties.
  */
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Alert,
   InteractionManager,
@@ -23,17 +23,16 @@ import {
   Platform,
   Pressable,
   ScrollView,
-  TextInput,
   View,
 } from "react-native";
 import { Stack, router } from "expo-router";
 import { Text } from "@/components/ui/text";
-import { TextField } from "@/components/ui/text-field";
-import { AutosizeTextArea } from "@/components/ui/autosize-textarea";
 import {
-  MIN_BODY_INPUT_HEIGHT_PX,
-  MOBILE_PLACEHOLDER_COLOR,
-} from "@/components/ui/input-tokens";
+  FormField,
+  FormHeaderAction,
+  FormHeaderCancel,
+  ProjectFormFields,
+} from "@/components/project/project-form";
 import { ProjectStatusIcon } from "@/components/ui/project-status-icon";
 import { ProjectPriorityIcon } from "@/components/ui/project-priority-icon";
 import {
@@ -44,6 +43,7 @@ import { useCreateProject } from "@/data/mutations/projects";
 import { useNewProjectDraftStore } from "@/data/stores/new-project-draft-store";
 import { useWorkspaceStore } from "@/data/workspace-store";
 import { useT } from "@/lib/i18n";
+import { useDiscardGuard } from "@/lib/use-discard-guard";
 
 /**
  * Typed map of new-project picker route pathnames. Keeps `router.push` calls
@@ -88,10 +88,21 @@ export default function NewProject() {
     [wsSlug],
   );
 
+  const leave = useDiscardGuard(dirty && !create.isSuccess, {
+    title: t("form.discard_title"),
+    message: t("form.discard_message"),
+    keep: t("form.keep_editing"),
+    discard: t("common:actions.discard"),
+  });
+
+  // The draft store outlives this screen, so every exit has to clear it —
+  // including the system back button, which runs none of the handlers below.
+  useEffect(() => () => resetDraft(), [resetDraft]);
+
   const onCancel = useCallback(() => {
     if (!dirty) {
       resetDraft();
-      router.back();
+      leave();
       return;
     }
     Alert.alert(
@@ -104,12 +115,12 @@ export default function NewProject() {
           style: "destructive",
           onPress: () => {
             resetDraft();
-            router.back();
+            leave();
           },
         },
       ],
     );
-  }, [dirty, resetDraft, t]);
+  }, [dirty, leave, resetDraft, t]);
 
   const onCreate = useCallback(() => {
     if (!canCreate) return;
@@ -124,7 +135,7 @@ export default function NewProject() {
       {
         onSuccess: (project) => {
           resetDraft();
-          router.back();
+          leave();
           // Wait for the modal dismiss animation to finish before pushing
           // the detail screen. `InteractionManager` resolves once iOS
           // says all in-flight animations / interactions are done — more
@@ -143,6 +154,7 @@ export default function NewProject() {
       },
     );
   }, [
+    leave,
     canCreate,
     create,
     title,
@@ -155,27 +167,25 @@ export default function NewProject() {
     t,
   ]);
 
-  const headerLeft = useCallback(() => {
-    return (
-      <Pressable onPress={onCancel} className="px-1 py-1">
-        <Text className="text-base text-brand">{t("common:actions.cancel")}</Text>
-      </Pressable>
-    );
-  }, [onCancel, t]);
+  const headerLeft = useCallback(
+    () => (
+      <FormHeaderCancel label={t("common:actions.cancel")} onPress={onCancel} />
+    ),
+    [onCancel, t],
+  );
 
-  const headerRight = useCallback(() => {
-    return (
-      <Pressable
+  const headerRight = useCallback(
+    () => (
+      <FormHeaderAction
+        label={
+          create.isPending ? t("actions.creating") : t("common:actions.create")
+        }
         onPress={onCreate}
         disabled={!canCreate}
-        className={canCreate ? "px-1 py-1" : "px-1 py-1 opacity-40"}
-      >
-        <Text className="text-base text-brand font-semibold">
-          {create.isPending ? t("actions.creating") : t("common:actions.create")}
-        </Text>
-      </Pressable>
-    );
-  }, [canCreate, onCreate, create.isPending, t]);
+      />
+    ),
+    [canCreate, onCreate, create.isPending, t],
+  );
 
   return (
     <>
@@ -186,86 +196,57 @@ export default function NewProject() {
       >
         <ScrollView
           className="flex-1"
-          contentContainerClassName="px-4 pt-5 pb-6 gap-4"
+          contentContainerClassName="gap-5 px-5 pb-6 pt-4"
           keyboardShouldPersistTaps="handled"
         >
-          <Field label={t("form.icon_emoji")}>
-            <TextInput
-              value={icon}
-              onChangeText={(v) => setIcon(v.slice(0, 4))}
-              placeholder="📦"
-              placeholderTextColor={MOBILE_PLACEHOLDER_COLOR}
-              className="h-9 w-16 self-start rounded-md bg-secondary/50 px-3 text-center text-lg text-foreground"
-              maxLength={4}
-            />
-          </Field>
-
-          <Field label={t("form.title")}>
-            <TextField
-              value={title}
-              onChangeText={setTitle}
-              placeholder={t("form.title_placeholder")}
-              className="h-9"
-              autoFocus
-              returnKeyType="next"
-            />
-          </Field>
-
-          <Field label={t("form.description")}>
-            <AutosizeTextArea
-              value={description}
-              onChangeText={setDescription}
-              placeholder={t("form.description_placeholder")}
-              className="rounded-md bg-secondary/50 px-3 py-2"
-              minHeight={MIN_BODY_INPUT_HEIGHT_PX}
-            />
-          </Field>
+          <ProjectFormFields
+            icon={icon}
+            onChangeIcon={setIcon}
+            title={title}
+            onChangeTitle={setTitle}
+            description={description}
+            onChangeDescription={setDescription}
+            autoFocusTitle
+          />
 
           <View className="flex-row gap-3">
             <View className="flex-1">
-              <Field label={t("properties.status")}>
+              <FormField label={t("properties.status")}>
                 <Pressable
                   onPress={() => openPicker("status")}
-                  className="h-9 flex-row items-center gap-2 rounded-md bg-secondary/50 px-3 active:bg-secondary"
+                  accessibilityRole="button"
+                  className="h-11 flex-row items-center gap-2 rounded-lg border border-border bg-card px-3 active:bg-secondary"
                 >
                   <ProjectStatusIcon status={status} size={16} />
-                  <Text className="flex-1 text-sm text-foreground" numberOfLines={1}>
+                  <Text
+                    className="flex-1 text-[15px] text-foreground"
+                    numberOfLines={1}
+                  >
                     {projectStatusLabel(status)}
                   </Text>
                 </Pressable>
-              </Field>
+              </FormField>
             </View>
             <View className="flex-1">
-              <Field label={t("properties.priority")}>
+              <FormField label={t("properties.priority")}>
                 <Pressable
                   onPress={() => openPicker("priority")}
-                  className="h-9 flex-row items-center gap-2 rounded-md bg-secondary/50 px-3 active:bg-secondary"
+                  accessibilityRole="button"
+                  className="h-11 flex-row items-center gap-2 rounded-lg border border-border bg-card px-3 active:bg-secondary"
                 >
                   <ProjectPriorityIcon priority={priority} size={16} />
-                  <Text className="flex-1 text-sm text-foreground" numberOfLines={1}>
+                  <Text
+                    className="flex-1 text-[15px] text-foreground"
+                    numberOfLines={1}
+                  >
                     {projectPriorityLabel(priority)}
                   </Text>
                 </Pressable>
-              </Field>
+              </FormField>
             </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </>
-  );
-}
-
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <View className="gap-2">
-      <Text className="text-xs font-medium text-muted-foreground">{label}</Text>
-      {children}
-    </View>
   );
 }

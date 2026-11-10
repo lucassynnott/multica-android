@@ -1,34 +1,33 @@
 /**
- * Kanban card. Compact by design: at the Fold 8's unfolded width a column is
- * ~296dp and two columns plus a gutter fit beside the navigation rail, so the
- * card shows identity, title, priority, assignee and due date — the same
- * field set web's `board-card.tsx` puts above the fold. Everything else
- * (labels, description, activity) lives on the issue screen.
+ * Kanban card. A card is an object in its own right, so it is one of the few
+ * bordered panels in the app (DESIGN.md, "Lists, not cards"):
+ * `bg-card border border-border rounded-lg p-3`.
  *
- * One surface: `rounded-xl border border-border bg-card p-4`. Identity and due
- * date collapse into a single 12 px muted line so the card has one text block
- * and one footer, not four stacked rows. The footer is Badges + the assignee,
- * and the status badge is opt-in: the column header already names the status,
- * so repeating it per card is noise — except where the column cannot name it
+ * Three lines, the same facts as a list row: mono identifier with the
+ * trailing meta (urgent, else due date, else priority), the title, then the
+ * assignee's avatar and name. Everything else (labels, description, activity)
+ * lives on the issue screen.
+ *
+ * The status badge is opt-in: the column header already names the status, so
+ * repeating it per card is noise, except where the column cannot name it
  * (see `BoardColumn`).
  */
+import { memo } from "react";
 import { Pressable, View } from "react-native";
 import type { Issue, IssueStatusCategory } from "@multica/core/types";
 import { Text } from "@/components/ui/text";
-import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/issue/status-badge";
 import { ActorAvatar } from "@/components/ui/actor-avatar";
-import { PriorityIcon } from "@/components/ui/priority-icon";
-import { formatDateOnly } from "@multica/core/issues/date";
-import { i18n, useT } from "@/lib/i18n";
+import { useActorLookup } from "@/data/use-actor-name";
+import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
+import { useIssueMeta } from "./issue-meta";
 
 interface Props {
   issue: Issue;
-  /** Width is fixed per column so cards align across the board. */
-  width: number;
-  onPress: () => void;
-  onLongPress: () => void;
-  /** Hidden while this card is the one being dragged. */
+  onPress: (issue: Issue) => void;
+  onLongPress: (issue: Issue) => void;
+  /** Dimmed while this card is the one being dragged. */
   dragging?: boolean;
   /**
    * Render the card's own StatusBadge. Off by default: the column header owns
@@ -41,9 +40,8 @@ interface Props {
   statusColor?: string | null;
 }
 
-export function BoardCard({
+export const BoardCard = memo(function BoardCard({
   issue,
-  width,
   onPress,
   onLongPress,
   dragging,
@@ -53,47 +51,66 @@ export function BoardCard({
   statusColor,
 }: Props) {
   const { t } = useT("issues");
-  const due = issue.due_date
-    ? formatDateOnly(
-        issue.due_date,
-        { month: "short", day: "numeric" },
-        i18n.resolvedLanguage ?? i18n.language,
-      )
-    : null;
-
-  const meta = due ? `${issue.identifier} · ${due}` : issue.identifier;
+  const meta = useIssueMeta(issue);
+  const { getName } = useActorLookup();
+  const assigned = Boolean(issue.assignee_type && issue.assignee_id);
+  const assignee = assigned
+    ? getName(issue.assignee_type, issue.assignee_id)
+    : t("board.unassigned");
 
   return (
     <Pressable
-      onPress={onPress}
-      onLongPress={onLongPress}
+      onPress={() => onPress(issue)}
+      onLongPress={() => onLongPress(issue)}
       delayLongPress={260}
-      style={{ width }}
-      className={`rounded-xl border border-border bg-card p-4 active:bg-secondary ${
-        dragging ? "opacity-30" : ""
-      }`}
+      accessibilityRole="button"
+      accessibilityLabel={[issue.identifier, issue.title, meta?.text, assignee]
+        .filter(Boolean)
+        .join(", ")}
+      className={cn(
+        "gap-2 rounded-lg border border-border bg-card p-3 active:bg-secondary",
+        dragging && "opacity-30",
+      )}
     >
-      <Text
-        className="text-[14px] font-medium leading-[19px] text-foreground"
-        numberOfLines={3}
-      >
+      <View className="flex-row items-center gap-2">
+        <Text
+          className="flex-1 font-mono text-xs text-muted-foreground"
+          numberOfLines={1}
+        >
+          {issue.identifier}
+        </Text>
+        {meta ? (
+          <Text
+            className={cn(
+              "text-xs",
+              meta.urgent
+                ? "font-semibold text-primary"
+                : "text-muted-foreground",
+            )}
+          >
+            {meta.text}
+          </Text>
+        ) : null}
+      </View>
+
+      <Text className="text-[15px] leading-[21px] text-foreground" numberOfLines={3}>
         {issue.title}
       </Text>
 
-      <Text
-        className="mt-1 text-[12px] text-muted-foreground tabular-nums"
-        numberOfLines={1}
-      >
-        {meta}
-      </Text>
-
-      <View className="mt-3 flex-row items-center gap-1.5">
-        {issue.priority !== "none" ? (
-          <Badge variant="outline" className="gap-1">
-            <PriorityIcon priority={issue.priority} size={11} />
-            <Badge.Text>{t(`priority.${issue.priority}`)}</Badge.Text>
-          </Badge>
+      <View className="flex-row items-center gap-2">
+        {assigned ? (
+          <ActorAvatar
+            type={issue.assignee_type}
+            id={issue.assignee_id}
+            size={22}
+          />
         ) : null}
+        <Text
+          className="flex-1 text-[13px] text-muted-foreground"
+          numberOfLines={1}
+        >
+          {assignee}
+        </Text>
         {showStatus ? (
           <StatusBadge
             label={statusLabel ?? issue.status}
@@ -102,15 +119,7 @@ export function BoardCard({
             color={statusColor}
           />
         ) : null}
-        <View className="flex-1" />
-        {issue.assignee_type && issue.assignee_id ? (
-          <ActorAvatar
-            type={issue.assignee_type}
-            id={issue.assignee_id}
-            size={20}
-          />
-        ) : null}
       </View>
     </Pressable>
   );
-}
+});

@@ -1,13 +1,9 @@
 /**
- * Close icon (✕) rendered in the modal Stack header. Matches the iOS
- * "close-in-a-circle" pattern used by Linear / Things on mobile create
- * sheets — visually pairs with the submit button on the opposite side.
+ * Close icon (✕) rendered in the modal Stack header.
  *
- * Implementation goes through `<IconButton variant="secondary">` (RNR
- * Button under the hood) so the secondary background + active state +
- * dark-mode color flip all come from the design-system tokens. The
- * className override locks the 28pt circular shape Linear / Things use
- * for this slot (RNR's default `size="icon"` is a 40pt square box).
+ * A plain glyph on a 44dp target: Graphite has no filled icon buttons
+ * except a screen's primary action, so the old filled circle is gone. The
+ * pressed state is the shared ghost-button one (`bg-secondary`).
  *
  * Used by `[workspace]/_layout.tsx` for the new-issue, search, and
  * new-comment modals.
@@ -21,9 +17,9 @@ export function ModalCloseButton() {
   return (
     <IconButton
       name="close"
-      iconSize={18}
-      variant="secondary"
-      className="size-7 rounded-full"
+      iconSize={22}
+      className="size-11"
+      hitSlop={4}
       onPress={() => router.back()}
       accessibilityLabel={t("common:actions.close")}
     />

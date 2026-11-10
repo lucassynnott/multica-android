@@ -1,7 +1,7 @@
 /**
  * Six-slot OTP input. Wraps `input-otp-native`'s headless OTPInput with
- * mobile design tokens (bg-secondary/50 box, primary border on active slot,
- * 2px caret). Paste-to-fill, autofocus, and iOS/Android one-time-code
+ * mobile design tokens (a `bg-card` panel per slot with a hairline, accent
+ * border on the active slot, mono digits because it is a code, 2px caret). Paste-to-fill, autofocus, and iOS/Android one-time-code
  * autofill are handled by the underlying library (textContentType + autoComplete
  * are set inside its TextInput).
  *
@@ -49,13 +49,13 @@ function Slot({ slot }: { slot: SlotProps }) {
   return (
     <View
       className={cn(
-        "w-12 h-14 rounded-md items-center justify-center bg-secondary/50",
-        slot.isActive && "border-2 border-primary",
+        "w-12 h-14 rounded-lg items-center justify-center bg-card border border-border",
+        slot.isActive && "border-primary",
       )}
     >
       {slot.char ? (
         <Text
-          className="text-foreground font-semibold"
+          className="font-mono text-foreground font-medium"
           style={{ fontSize: 22, includeFontPadding: false }}
         >
           {slot.char}

@@ -17,6 +17,7 @@ import { ModalCloseButton } from "@/components/ui/modal-close-button";
 import { useNewIssueDraftResetOnWorkspaceChange } from "@/data/stores/new-issue-draft-store";
 import { useNewProjectDraftResetOnWorkspaceChange } from "@/data/stores/new-project-draft-store";
 import { useChatSessionPickerResetOnWorkspaceChange } from "@/data/stores/chat-session-picker-store";
+import { useIssuePaneResetOnWorkspaceChange } from "@/data/stores/issue-pane-store";
 import { useT } from "@/lib/i18n";
 
 /**
@@ -120,6 +121,7 @@ export default function WorkspaceLayout() {
   useNewIssueDraftResetOnWorkspaceChange(matched?.id ?? null);
   useNewProjectDraftResetOnWorkspaceChange(matched?.id ?? null);
   useChatSessionPickerResetOnWorkspaceChange(matched?.id ?? null);
+  useIssuePaneResetOnWorkspaceChange(matched?.id ?? null);
 
   // Wait for the workspaces list before deciding membership — otherwise a
   // valid deep link would briefly redirect away on cold start.
@@ -153,6 +155,9 @@ export default function WorkspaceLayout() {
           options={{
             title: t("navigation:routes.edit_project"),
             presentation: "modal",
+            // Android pushes a "modal" like any screen and draws its own
+            // back arrow beside our close button; one exit is enough.
+            headerBackVisible: false,
             headerLeft: () => <ModalCloseButton />,
           }}
         />
@@ -161,6 +166,9 @@ export default function WorkspaceLayout() {
           options={{
             title: t("navigation:routes.edit_issue"),
             presentation: "modal",
+            // Android pushes a "modal" like any screen and draws its own
+            // back arrow beside our close button; one exit is enough.
+            headerBackVisible: false,
             headerLeft: () => <ModalCloseButton />,
           }}
         />
@@ -169,6 +177,9 @@ export default function WorkspaceLayout() {
           options={{
             title: t("navigation:routes.new_project"),
             presentation: "modal",
+            // Android pushes a "modal" like any screen and draws its own
+            // back arrow beside our close button; one exit is enough.
+            headerBackVisible: false,
             headerLeft: () => <ModalCloseButton />,
           }}
         />
@@ -228,6 +239,9 @@ export default function WorkspaceLayout() {
             title: t("navigation:routes.execution_record"),
             // Opened above the runs formSheet; dismiss back to that sheet.
             presentation: "modal",
+            // Android pushes a "modal" like any screen and draws its own
+            // back arrow beside our close button; one exit is enough.
+            headerBackVisible: false,
             headerLeft: () => <ModalCloseButton />,
           }}
         />
@@ -298,8 +312,8 @@ export default function WorkspaceLayout() {
         <Stack.Screen name="issues-filter" options={SHEET_OPTIONS} />
         {/* Chat session-switch sheet. */}
         <Stack.Screen name="chat-sessions" options={SHEET_OPTIONS} />
-        {/* Workspace switcher — reached from the More popover's collapsed
-            WorkspaceCard. Two-step (pick → iOS Alert confirm → switch). */}
+        {/* Workspace switcher — reached from the Workspace row on the More
+            tab. Two-step (pick → iOS Alert confirm → switch). */}
         <Stack.Screen name="switch-workspace" options={SHEET_OPTIONS} />
         <Stack.Screen
           name="more/issues"
@@ -355,6 +369,9 @@ export default function WorkspaceLayout() {
           options={{
             title: t("navigation:routes.new_issue"),
             presentation: "modal",
+            // Android pushes a "modal" like any screen and draws its own
+            // back arrow beside our close button; one exit is enough.
+            headerBackVisible: false,
             headerLeft: () => <ModalCloseButton />,
           }}
         />
@@ -363,6 +380,9 @@ export default function WorkspaceLayout() {
           options={{
             title: t("navigation:routes.search"),
             presentation: "modal",
+            // Android pushes a "modal" like any screen and draws its own
+            // back arrow beside our close button; one exit is enough.
+            headerBackVisible: false,
             headerLeft: () => <ModalCloseButton />,
           }}
         />

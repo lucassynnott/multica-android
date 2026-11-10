@@ -15,7 +15,9 @@ import {
 } from "@/data/mutations/issues";
 import { useCreateLabel } from "@/data/mutations/labels";
 import { useWorkspaceStore } from "@/data/workspace-store";
-import { useNativeSearchBar } from "@/lib/use-native-search-bar";
+import { View } from "react-native";
+import { PickerSearchField } from "@/components/ui/picker-search-field";
+import { usePickerSearch } from "@/lib/use-native-search-bar";
 import { useT } from "@/lib/i18n";
 
 export default function IssueLabelPickerRoute() {
@@ -26,7 +28,7 @@ export default function IssueLabelPickerRoute() {
   const attachLabel = useAttachLabel(id);
   const detachLabel = useDetachLabel(id);
   const createLabel = useCreateLabel();
-  const query = useNativeSearchBar(t("picker.search_labels"), { autoFocus: true });
+  const search = usePickerSearch(t("picker.search_labels"), { autoFocus: true });
 
   // Synchronous lock to prevent double-submit on rapid taps on the Create
   // row before React state updates — mirrors web's `creatingRef` pattern in
@@ -36,26 +38,29 @@ export default function IssueLabelPickerRoute() {
   const attached = issue?.labels ?? [];
 
   return (
-    <LabelPickerBody
-      attached={attached}
-      query={query}
-      onAttach={(label) => attachLabel.mutate({ label })}
-      onDetach={(labelId) => detachLabel.mutate({ labelId })}
-      onCreate={(name, color) => {
-        if (creatingRef.current) return;
-        creatingRef.current = true;
-        createLabel.mutate(
-          { name, color },
-          {
-            onSuccess: (label) => {
-              attachLabel.mutate({ label });
+    <View className="flex-1">
+      <PickerSearchField search={search} />
+      <LabelPickerBody
+        attached={attached}
+        query={search.query}
+        onAttach={(label) => attachLabel.mutate({ label })}
+        onDetach={(labelId) => detachLabel.mutate({ labelId })}
+        onCreate={(name, color) => {
+          if (creatingRef.current) return;
+          creatingRef.current = true;
+          createLabel.mutate(
+            { name, color },
+            {
+              onSuccess: (label) => {
+                attachLabel.mutate({ label });
+              },
+              onSettled: () => {
+                creatingRef.current = false;
+              },
             },
-            onSettled: () => {
-              creatingRef.current = false;
-            },
-          },
-        );
-      }}
-    />
+          );
+        }}
+      />
+    </View>
   );
 }

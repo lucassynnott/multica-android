@@ -1,12 +1,16 @@
 /**
- * The board canvas: columns side by side, each scrolling on its own.
+ * The kanban canvas: columns side by side, each scrolling on its own.
  *
  * Shared by the workspace board tab and the board inside a project so the
- * geometry, the gutter and the column behaviour are identical in both places.
- * The caller owns the data, the filters and the header; this owns only how the
- * columns are laid out on screen.
+ * geometry and the column behaviour are identical in both places. The caller
+ * owns the data, the filters and the header; this owns only how the columns
+ * are laid out on screen.
+ *
+ * Columns butt against each other and are divided by hairlines, so the
+ * metrics' `gap` is not drawn between them. The snap interval is exactly one
+ * column.
  */
-import { ScrollView, View } from "react-native";
+import { ScrollView } from "react-native";
 import type { Issue } from "@multica/core/types";
 import { BoardColumn } from "./board-column";
 import type { BoardColumnModel } from "@/lib/board";
@@ -29,21 +33,21 @@ export function BoardCanvas({
   onAddIssue,
 }: Props) {
   const layout = useResponsiveLayout();
-  const { columnWidth, gap, listPadding } = boardMetrics(layout);
+  const { columnWidth } = boardMetrics(layout);
 
   return (
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
+      // Settle on a column edge. Free scrolling on the cover screen, where
+      // one column fills the view, kept stopping with two half-columns.
+      snapToInterval={columnWidth}
+      snapToAlignment="start"
+      decelerationRate="fast"
       style={{ flex: 1 }}
-      contentContainerStyle={{
-        gap,
-        paddingHorizontal: listPadding,
-        paddingTop: listPadding,
-        // Stretch (the default) gives each column the viewport's height, so
-        // its card list scrolls independently instead of growing past the
-        // bottom of the screen.
-      }}
+      // No contentContainerStyle: stretch (the default) gives each column the
+      // viewport's height, so its card list scrolls independently instead of
+      // growing past the bottom of the screen.
     >
       {columns.map((column) => (
         <BoardColumn
@@ -56,8 +60,6 @@ export function BoardCanvas({
           onAddIssue={onAddIssue}
         />
       ))}
-      {/* Trailing gutter so the last column doesn't sit flush to the edge. */}
-      <View style={{ width: listPadding - gap }} />
     </ScrollView>
   );
 }

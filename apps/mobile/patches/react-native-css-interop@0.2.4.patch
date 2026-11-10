@@ -1,0 +1,30 @@
+diff --git a/dist/metro/index.js b/dist/metro/index.js
+index c91ba6adf049dd5c6eec1ec8301ecc0802f41bfc..bff6a74b0dac838d94bb9f5cfecfbc85cdd29fdd 100644
+--- a/dist/metro/index.js
++++ b/dist/metro/index.js
+@@ -176,7 +176,25 @@ async function startCSSProcessor(filePath, platform, isDev, { input, getCSSForPl
+                 ? css
+                 : getNativeJS((0, css_to_rn_1.cssToReactNativeRuntime)(css, options), debug)));
+             debug(`virtualStyles.emit ${platform}`);
++            // Metro >= 0.83 replaced the flat eventsQueue with a
++            // {changes, rootDir} change event; DependencyGraph and
++            // DeltaCalculator read changes.addedFiles/modifiedFiles/
++            // removedFiles and throw on the old shape, which killed the dev
++            // server on the first style regeneration. Emit both shapes.
+             haste.emit("change", {
++                rootDir: require("path").dirname(filePath),
++                changes: {
++                    addedFiles: [],
++                    modifiedFiles: [
++                        [
++                            require("path").basename(filePath),
++                            { isSymlink: false, modifiedTime: Date.now() },
++                        ],
++                    ],
++                    removedFiles: [],
++                    addedDirectories: [],
++                    removedDirectories: [],
++                },
+                 eventsQueue: [
+                     {
+                         filePath,

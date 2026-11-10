@@ -80,7 +80,8 @@ export const AutosizeTextArea = React.forwardRef<TextInput, AutosizeTextAreaProp
           },
           style,
         ]}
-        className={cn("text-base text-foreground", className)}
+        // `font-sans` is explicit: a raw TextInput does not inherit the family.
+        className={cn("font-sans text-base text-foreground", className)}
         {...rest}
       />
     );

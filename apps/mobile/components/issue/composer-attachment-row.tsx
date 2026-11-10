@@ -148,12 +148,12 @@ function MentionChipView({
   const label = mention.type === "issue" ? mention.name : `@${mention.name}`;
 
   return (
-    <View className="flex-row items-center gap-1 h-7 px-2 rounded-full bg-primary/10">
-      <Ionicons name={iconName} size={12} color={theme.primary} />
-      <Text className="text-xs font-medium text-foreground">{label}</Text>
+    <View className="h-8 flex-row items-center gap-1.5 rounded-lg border border-border bg-secondary px-2.5">
+      <Ionicons name={iconName} size={12} color={theme.mutedForeground} />
+      <Text className="text-[13px] font-medium text-foreground">{label}</Text>
       <Pressable
         onPress={() => onRemove(mention.type, mention.id)}
-        hitSlop={8}
+        hitSlop={14}
         accessibilityRole="button"
         accessibilityLabel={t("a11y.remove_mention", { name: mention.name })}
         className="h-4 w-4 items-center justify-center"
@@ -222,7 +222,7 @@ function AttachmentChipView({ item, onRemove, onRetry }: AttachmentChipProps) {
           ? t("a11y.retry_upload", { name: item.filename })
           : t("a11y.open_file", { name: item.filename })
       }
-      className="flex-row items-center gap-1 h-7 px-2 rounded-full bg-secondary active:opacity-80"
+      className="h-8 flex-row items-center gap-1.5 rounded-lg border border-border bg-secondary px-2.5 active:opacity-80"
     >
       {item.status === "uploading" ? (
         <ActivityIndicator size="small" color={theme.mutedForeground} />
@@ -238,14 +238,14 @@ function AttachmentChipView({ item, onRemove, onRetry }: AttachmentChipProps) {
         />
       )}
       <Text
-        className="text-xs text-foreground max-w-[120px]"
+        className="max-w-[120px] text-[13px] text-foreground"
         numberOfLines={1}
       >
         {item.filename}
       </Text>
       <Pressable
         onPress={() => onRemove(item.localId)}
-        hitSlop={8}
+        hitSlop={14}
         accessibilityRole="button"
         accessibilityLabel={t("a11y.remove_file", { name: item.filename })}
         className="h-4 w-4 items-center justify-center"

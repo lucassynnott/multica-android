@@ -1,5 +1,7 @@
 {
   "title": "收件箱",
+  "unread_count": "{{count}} 条未读",
+  "swipe_hint": "向左滑动一行即可归档。",
   "empty": {
     "title": "已处理全部通知",
     "body": "通知和智能体更新会显示在这里。"

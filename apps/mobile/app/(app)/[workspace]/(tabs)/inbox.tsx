@@ -1,22 +1,19 @@
 import { useCallback, useMemo, useState } from "react";
-import {
-  Alert,
-  FlatList,
-  View,
-} from "react-native";
+import { Alert, FlatList, Pressable, View } from "react-native";
 import { ActionSheet } from "@/lib/action-sheet";
 import { useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
 import type { InboxItem, InboxSection } from "@multica/core/types";
 import { isInboxItemUnread } from "@multica/core/inbox/section";
 import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Header } from "@/components/ui/header";
-import { SegmentedControl } from "@/components/ui/segmented-control";
+import { TideTexture } from "@/components/ui/tide-texture";
 import { IconButton } from "@/components/ui/icon-button";
 import { HeaderActions } from "@/components/ui/app-header-actions";
+import { SplitPane } from "@/components/ui/split-pane";
+import { IssueDetailPane } from "@/components/issue/issue-detail-pane";
 import { SwipeableInboxRow } from "@/components/inbox/swipeable-inbox-row";
 import { inboxListOptions } from "@/data/queries/inbox";
 import {
@@ -28,10 +25,10 @@ import {
   useMarkInboxRead,
 } from "@/data/mutations/inbox";
 import { useWorkspaceStore } from "@/data/workspace-store";
-import { useColorScheme } from "@/lib/use-color-scheme";
-import { THEME } from "@/lib/theme";
 import { useT } from "@/lib/i18n";
+import { useIssuePane } from "@/lib/use-issue-pane";
 import { useInboxUnreadCount } from "@/lib/unread-counts";
+import { cn } from "@/lib/utils";
 import {
   getInboxNavigationTarget,
   groupInboxItemsBySection,
@@ -41,7 +38,6 @@ export default function Inbox() {
   const { t } = useT("inbox");
   const wsId = useWorkspaceStore((s) => s.currentWorkspaceId);
   const wsSlug = useWorkspaceStore((s) => s.currentWorkspaceSlug);
-  const { colorScheme } = useColorScheme();
   const { data: rawItems, isLoading, error, refetch, isRefetching } = useQuery(
     inboxListOptions(wsId),
   );
@@ -61,6 +57,12 @@ export default function Inbox() {
   const archiveAllRead = useArchiveAllReadInbox();
   const archiveCompleted = useArchiveCompletedInbox();
 
+  // Wide windows: a row that targets an issue opens it in the detail pane
+  // beside the list instead of pushing the issue screen. Rows with another
+  // target (the autopilot sheets) still push.
+  const pane = useIssuePane("inbox");
+  const selectIssue = pane.select;
+
   const onPressItem = useCallback((item: InboxItem) => {
     if (isInboxItemUnread(item)) {
       // Optimistic read flip lives in useMarkInboxRead.onMutate — fires
@@ -69,9 +71,20 @@ export default function Inbox() {
       // snapshot for the native stack push transition.
       markRead.mutate(item.id);
     }
-    const target = getInboxNavigationTarget(item, wsSlug, String(Date.now()));
+    const historyToken = String(Date.now());
+    if (
+      item.issue_id &&
+      selectIssue({
+        issueId: item.issue_id,
+        highlight: item.details?.comment_id,
+        nonce: historyToken,
+      })
+    ) {
+      return;
+    }
+    const target = getInboxNavigationTarget(item, wsSlug, historyToken);
     if (target) router.push(target);
-  }, [markRead, wsSlug]);
+  }, [markRead, wsSlug, selectIssue]);
 
   // Trailing batch menu — mirrors web's dropdown
   // (packages/views/inbox/components/inbox-page.tsx). "Mark all read" is
@@ -114,90 +127,162 @@ export default function Inbox() {
     );
   };
 
+  const loadFailed = !!error && !rawItems;
+
   return (
     <View className="flex-1 bg-background">
-      <Header
-        title={t("title")}
-        right={
+      <TideTexture height={420} />
+      <SplitPane
+        split={pane.split}
+        detail={<IssueDetailPane surface="inbox" />}
+        list={
           <>
-            <IconButton
-              name="ellipsis-horizontal"
-              onPress={onPressMenu}
-              accessibilityLabel={t("actions.inbox_actions")}
+            {/* The count is the server's unread summary, never a tally of the rows
+                below — the two sections dedupe differently from the badge. */}
+            <Header
+              title={t("title")}
+              count={
+                unreadCount > 0 ? t("unread_count", { count: unreadCount }) : undefined
+              }
+              right={
+                <>
+                  <HeaderActions />
+                  <IconButton
+                    name="ellipsis-horizontal"
+                    onPress={onPressMenu}
+                    accessibilityLabel={t("actions.inbox_actions")}
+                  />
+                </>
+              }
             />
-            <HeaderActions />
+            <SectionTabs
+              value={section}
+              onChange={setSection}
+              accessibilityLabel={t("title")}
+              options={[
+                { value: "action", label: t("sections.action") },
+                { value: "activity", label: t("sections.activity") },
+              ]}
+            />
+            {isLoading ? (
+              <InboxLoading />
+            ) : (
+              // One list for rows, the empty state and the load error, so every
+              // state can be pulled to refresh.
+              <FlatList
+                data={loadFailed ? [] : data}
+                keyExtractor={(item) => item.id}
+                extraData={pane.selectedId}
+                contentContainerStyle={{ flexGrow: 1, paddingBottom: 24 }}
+                renderItem={({ item }) => (
+                  <SwipeableInboxRow
+                    item={item}
+                    selected={!!item.issue_id && item.issue_id === pane.selectedId}
+                    onPress={() => onPressItem(item)}
+                    onArchive={() => archive.mutate(item.id)}
+                  />
+                )}
+                ListEmptyComponent={
+                  loadFailed ? (
+                    <View className="gap-3 px-5 pt-6">
+                      <Text className="text-[15px] leading-[21px] text-foreground">
+                        {t("errors.load_failed", {
+                          message: error instanceof Error ? error.message : "unknown",
+                        })}
+                      </Text>
+                      <Button
+                        variant="outline"
+                        className="min-h-11 self-start"
+                        onPress={() => refetch()}
+                      >
+                        <Text>{t("common:actions.retry")}</Text>
+                      </Button>
+                    </View>
+                  ) : (
+                    <InboxEmpty section={section} />
+                  )
+                }
+                ListFooterComponent={
+                  !loadFailed && data.length > 0 ? (
+                    <Text className="px-5 pt-[18px] text-[13px] text-muted-foreground">
+                      {t("swipe_hint")}
+                    </Text>
+                  ) : null
+                }
+                refreshing={isRefetching}
+                onRefresh={refetch}
+              />
+            )}
           </>
         }
       />
-      {/* Breathing room under the header, then the switch, then the list.
-          The previous markup put the section switch flush against the header
-          border with 4pt beneath it, so the screen read as one crammed block.
-          Group gaps follow the 8pt grid: 16 above the group, 8 below it. */}
-      <View className="px-4 pt-4 pb-2">
-        <SegmentedControl
-          options={[
-            {
-              value: "action",
-              label: t("sections.action"),
-              badge: unreadCount,
-            },
-            { value: "activity", label: t("sections.activity") },
-          ]}
-          value={section}
-          onChange={(value) => setSection(value)}
-          accessibilityLabel={t("title")}
-        />
-      </View>
-      {isLoading ? (
-        <InboxLoading />
-      ) : error ? (
-        <View className="px-4 gap-3 pt-4">
-          <Text className="text-sm text-destructive">
-            {t("errors.load_failed", {
-              message: error instanceof Error ? error.message : "unknown",
-            })}
-          </Text>
-          <Button variant="outline" onPress={() => refetch()}>
-            <Text>{t("common:actions.retry")}</Text>
-          </Button>
-        </View>
-      ) : !data || data.length === 0 ? (
-        <InboxEmpty
-          section={section}
-          iconColor={THEME[colorScheme].mutedForeground}
-        />
-      ) : (
-        <FlatList
-          data={data}
-          keyExtractor={(item) => item.id}
-          ItemSeparatorComponent={() => (
-            <View className="h-px bg-border ml-16" />
-          )}
-          contentContainerClassName="pb-6"
-          renderItem={({ item }) => (
-            <SwipeableInboxRow
-              item={item}
-              onPress={() => onPressItem(item)}
-              onArchive={() => archive.mutate(item.id)}
-            />
-          )}
-          refreshing={isRefetching}
-          onRefresh={refetch}
-        />
-      )}
     </View>
   );
 }
 
-// Loading state — 6 row-shaped Skeletons matching InboxRow's layout
-// (avatar circle + two text lines). Perceived perf wins over a centered
-// spinner because the eye immediately sees the list-like structure.
+/**
+ * Text tabs for the two sections (DESIGN.md "Tabs inside a screen"): the
+ * selected one is 600 with a 2dp foreground underline sitting on the hairline.
+ */
+function SectionTabs({
+  options,
+  value,
+  onChange,
+  accessibilityLabel,
+}: {
+  options: { value: InboxSection; label: string }[];
+  value: InboxSection;
+  onChange: (value: InboxSection) => void;
+  accessibilityLabel: string;
+}) {
+  return (
+    <View
+      className="flex-row gap-6 border-b border-border px-5"
+      accessibilityRole="tablist"
+      accessibilityLabel={accessibilityLabel}
+    >
+      {options.map((option) => {
+        const selected = option.value === value;
+        return (
+          <Pressable
+            key={option.value}
+            onPress={() => onChange(option.value)}
+            accessibilityRole="tab"
+            accessibilityState={{ selected }}
+            hitSlop={{ left: 12, right: 12 }}
+            className={cn(
+              "h-11 min-w-11 justify-center border-b-2",
+              selected ? "border-foreground" : "border-transparent",
+            )}
+          >
+            <Text
+              className={cn(
+                "text-[15px]",
+                selected
+                  ? "font-semibold text-foreground"
+                  : "text-muted-foreground",
+              )}
+            >
+              {option.label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+// Loading state — row-shaped skeletons matching InboxRow (avatar + two text
+// lines), so the eye lands on list structure instead of a centered spinner.
 function InboxLoading() {
   return (
-    <View className="px-4 pt-4 gap-4">
+    <View>
       {Array.from({ length: 6 }).map((_, i) => (
-        <View key={i} className="flex-row gap-3">
-          <Skeleton className="size-9 rounded-full" />
+        <View
+          key={i}
+          className="min-h-16 flex-row gap-3 border-b border-border px-5 py-3.5"
+        >
+          <Skeleton className="size-8 rounded-full" />
           <View className="flex-1 gap-2 pt-1">
             <Skeleton className="h-3.5 w-3/4" />
             <Skeleton className="h-3 w-1/2" />
@@ -208,24 +293,15 @@ function InboxLoading() {
   );
 }
 
-function InboxEmpty({
-  section,
-  iconColor,
-}: {
-  section: InboxSection;
-  iconColor: string;
-}) {
+function InboxEmpty({ section }: { section: InboxSection }) {
   const { t } = useT("inbox");
 
   return (
-    <View className="flex-1 items-center justify-center px-8 gap-2">
-      <Ionicons name="mail-open-outline" size={32} color={iconColor} />
-      <Text className="text-sm font-medium text-foreground text-center">
-        {section === "activity"
-          ? t("sections.activity_empty")
-          : t("empty.title")}
+    <View className="gap-1 px-5 pt-6">
+      <Text className="text-[15px] font-semibold leading-[21px] text-foreground">
+        {section === "activity" ? t("sections.activity_empty") : t("empty.title")}
       </Text>
-      <Text className="text-xs text-muted-foreground text-center leading-[17px]">
+      <Text className="text-[13px] leading-[19px] text-muted-foreground">
         {section === "activity"
           ? t("sections.activity_empty_body")
           : t("empty.body")}

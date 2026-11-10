@@ -1,16 +1,19 @@
 /**
  * Bottom-sheet renderer for `showActionSheetWithOptions` on Android.
  *
- * Mounted once in the root layout. Keeps the visual language of the iOS
- * native sheet: dimmed backdrop, one rounded panel, a scrolling list of
- * actions with the cancel action last, destructive actions in the destructive
- * colour. Native Wind tokens keep light/dark automatic.
+ * Mounted once in the root layout. Graphite: a dimmed backdrop and one panel
+ * with a top hairline, holding plain left-aligned 52dp rows on the 20dp gutter
+ * with hairlines between them — the same row language as the More screen. The
+ * cancel action stays last and muted, destructive actions use the destructive
+ * ink. NativeWind tokens keep light/dark automatic.
  */
 import { useCallback, useEffect, useState } from "react";
 import { Modal, Pressable, ScrollView, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { Text } from "@/components/ui/text";
+import { THEME } from "@/lib/theme";
+import { useColorScheme } from "@/lib/use-color-scheme";
 import {
   setActionSheetPresenter,
   type ActionSheetRequest,
@@ -19,6 +22,9 @@ import {
 export function ActionSheetHost() {
   const [request, setRequest] = useState<ActionSheetRequest | null>(null);
   const insets = useSafeAreaInsets();
+  const { colorScheme } = useColorScheme();
+  const muted = THEME[colorScheme].mutedForeground;
+  const ripple = THEME[colorScheme].secondary;
   // `useWindowDimensions()` reports the whole window, which under
   // edge-to-edge includes the system bars — measured on a Fold 8 canvas it put
   // the panel bottom below the visible edge and pushed the Cancel row off
@@ -32,14 +38,18 @@ export function ActionSheetHost() {
   const bottomPadding = Math.max(insets.bottom, 16) + 8;
   // Explicit height on the list is what actually clips in RN; `maxHeight` on
   // a ScrollView and `flex: 1` both let the content keep its natural height,
-  // which pushed everything below it past the panel edge. Every option —
-  // Cancel included — lives inside this one list, so there is no pinned row
-  // to lose. Budget the title block and the panel padding only.
-  const TITLE_BLOCK_HEIGHT = 64;
-  const listBudget = Math.max(
-    120,
-    panelMaxHeight - TITLE_BLOCK_HEIGHT - bottomPadding,
-  );
+  // which pushed everything below it past the panel edge.
+  //
+  // The header is measured, not assumed. It used to be budgeted as a fixed
+  // 64dp, which is only right for a one-line title over a one-line message:
+  // a board card's sheet passes the issue title as the message, and a title
+  // that wrapped made the header taller than its budget, so the fixed-height
+  // panel clipped the last rows — they painted partly but took no taps. A
+  // sheet with no title at all had the opposite problem, 64dp of dead space.
+  const [headerHeight, setHeaderHeight] = useState(0);
+  const hasHeader = !!(request?.title || request?.message);
+  const headerBlock = hasHeader ? headerHeight : 0;
+  const listBudget = Math.max(120, panelMaxHeight - headerBlock - bottomPadding);
   const [contentHeight, setContentHeight] = useState(0);
   const listHeight =
     contentHeight > 0 ? Math.min(contentHeight, listBudget) : listBudget;
@@ -69,6 +79,7 @@ export function ActionSheetHost() {
       transparent
       animationType="fade"
       statusBarTranslucent
+      navigationBarTranslucent
       onRequestClose={() => dismiss(cancelIndex)}
     >
       <View
@@ -82,28 +93,43 @@ export function ActionSheetHost() {
           onPress={() => dismiss(cancelIndex)}
         />
         <View
-          className="bg-background border-t border-border rounded-t-2xl overflow-hidden"
+          className="bg-background border-t border-border rounded-t-xl overflow-hidden"
           style={{
-            // Pin the panel's layout box to its visible content. Leaving it
-            // merely `maxHeight`-capped let the children paint below the box
-            // on Android: rows were visible but received no touches near the
-            // bottom of the sheet.
+            // Pin the panel's layout box to its visible content: a merely
+            // `maxHeight`-capped panel lets children paint below the box on
+            // Android, where they receive no touches.
             height: Math.min(
               panelMaxHeight,
-              listHeight + TITLE_BLOCK_HEIGHT + bottomPadding,
+              listHeight + headerBlock + bottomPadding,
             ),
             paddingBottom: bottomPadding,
+            // A phone-width sheet centred on the unfolded canvas, instead of
+            // centred labels stretched across 970dp.
+            width: "100%",
+            maxWidth: 520,
+            alignSelf: "center",
           }}
         >
           {request?.title || request?.message ? (
-            <View className="px-4 pt-4 pb-2 items-center gap-1 relative">
+            <View
+              className="pl-5 pr-14 pt-4 pb-3 gap-0.5 relative border-b border-border"
+              onLayout={(event) =>
+                setHeaderHeight(event.nativeEvent.layout.height)
+              }
+            >
               {request.title ? (
-                <Text className="text-sm font-semibold text-foreground text-center">
+                <Text
+                  className="text-[15px] leading-[21px] font-semibold text-foreground"
+                  numberOfLines={1}
+                >
                   {request.title}
                 </Text>
               ) : null}
               {request.message ? (
-                <Text className="text-xs text-muted-foreground text-center">
+                <Text
+                  className="text-[13px] text-muted-foreground"
+                  numberOfLines={2}
+                >
                   {request.message}
                 </Text>
               ) : null}
@@ -116,11 +142,11 @@ export function ActionSheetHost() {
                 <Pressable
                   onPress={() => dismiss(cancelIndex)}
                   hitSlop={12}
-                  className="absolute right-0 top-2 p-3"
+                  className="absolute right-1 top-1 size-11 items-center justify-center"
                   accessibilityLabel={request.options[cancelIndex]}
                   accessibilityRole="button"
                 >
-                  <Ionicons name="close" size={20} color="#71717a" />
+                  <Ionicons name="close" size={20} color={muted} />
                 </Pressable>
               ) : null}
             </View>
@@ -133,17 +159,28 @@ export function ActionSheetHost() {
           >
             {request?.options.map((label, index) => {
               const destructive = request.destructiveButtonIndex === index;
+              const cancel = index === cancelIndex;
+              const last = index === request.options.length - 1;
               return (
                 <Pressable
                   key={`${label}-${index}`}
                   onPress={() => dismiss(index)}
-                  className="px-4 py-3.5 border-b border-border active:bg-secondary"
+                  accessibilityRole="button"
+                  android_ripple={{ color: ripple }}
+                  className={
+                    last
+                      ? "px-5 min-h-[52px] justify-center"
+                      : "px-5 min-h-[52px] justify-center border-b border-border"
+                  }
                 >
                   <Text
+                    numberOfLines={2}
                     className={
                       destructive
-                        ? "text-base text-destructive text-center"
-                        : "text-base text-foreground text-center"
+                        ? "text-[15px] leading-[21px] text-destructive"
+                        : cancel
+                          ? "text-[15px] leading-[21px] text-muted-foreground"
+                          : "text-[15px] leading-[21px] text-foreground"
                     }
                   >
                     {label}

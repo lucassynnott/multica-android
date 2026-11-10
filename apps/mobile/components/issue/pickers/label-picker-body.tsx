@@ -138,8 +138,8 @@ export function LabelPickerBody({
         )
       }
       ListEmptyComponent={
-        <View className="px-3 py-8 items-center">
-          <Text className="text-sm text-muted-foreground text-center">
+        <View className="items-center px-5 py-8">
+          <Text className="text-center text-[13px] text-muted-foreground">
             {query
               ? t("picker.no_matches")
               : t("picker.no_labels")}

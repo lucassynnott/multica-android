@@ -19,10 +19,13 @@
  * numbers rather than against Material's generic 600/840/1200:
  *
  *   compact   < 600dp    phone, folded cover screen, bottom tabs
- *   medium    600-899dp  Fold 8 unfolded: navigation rail, wider lists,
- *                        two or three kanban columns side by side
+ *   medium    600-899dp  Fold 8 unfolded: navigation rail, two or three
+ *                        kanban columns side by side, list + detail panes
  *   expanded  >= 900dp   Fold 8 landscape, Fold 8 Ultra, tablets, DeX:
- *                        rail + master-detail split panes
+ *                        the same with a slightly wider list column
+ *
+ * The list + detail split has its own floor (`SPLIT_PANE_MIN_WIDTH`), a
+ * little above `medium`, so a 600dp window does not squeeze the detail.
  */
 import { useWindowDimensions } from "react-native";
 
@@ -32,6 +35,13 @@ export const WINDOW_BREAKPOINTS = {
   /** Master-detail split panes. */
   expanded: 900,
 } as const;
+
+/**
+ * Narrowest window that gets the list + detail split: the 72dp rail, a 300dp
+ * list and at least 300dp of detail. Every unfolded Fold posture clears it;
+ * a medium window narrower than this keeps the full-width list.
+ */
+export const SPLIT_PANE_MIN_WIDTH = 672;
 
 export type WindowSizeClass = "compact" | "medium" | "expanded";
 
@@ -45,6 +55,8 @@ export interface ResponsiveLayout {
   isLandscape: boolean;
   /** True when a list + detail split pane fits without either side cramping. */
   isTwoPane: boolean;
+  /** True when list surfaces open an issue beside the list, not over it. */
+  isSplitPane: boolean;
 }
 
 export function windowSizeClass(width: number): WindowSizeClass {
@@ -70,7 +82,13 @@ export function useResponsiveLayout(): ResponsiveLayout {
     isExpanded: sizeClass === "expanded",
     isLandscape: width > height,
     isTwoPane: width >= WINDOW_BREAKPOINTS.expanded,
+    isSplitPane: sizeClass !== "compact" && width >= SPLIT_PANE_MIN_WIDTH,
   };
+}
+
+/** Width of the list column in a list + detail split. */
+export function splitPaneListWidth(layout: ResponsiveLayout): number {
+  return layout.isExpanded ? 320 : 300;
 }
 
 /**
