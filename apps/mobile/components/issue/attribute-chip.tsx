@@ -1,13 +1,10 @@
 /**
- * Generic attribute chip used on issue forms. Each chip pairs an icon node
- * (any RN element — StatusIcon, PriorityIcon, ActorAvatar, emoji, etc) with a
- * textual label. Filled = the property has a value; dimmed = empty placeholder
- * ("Label", "Cycle", ...).
+ * Property chip used on issue forms: a 44 dp bordered `rounded-lg` button
+ * pairing an icon node (any RN element — StatusIcon, PriorityIcon,
+ * ActorAvatar, emoji, etc) with a label.
  *
- * Visual: a quiet outline pill in the shadcn Nova language — 24 pt tall,
- * `text-xs`, a 1 px border and no fill, so a row of these reads as metadata
- * rather than as a stack of buttons. The dimmed state keeps the dashed border
- * (at 30 % of muted-foreground) to say "nothing set yet" without adding colour.
+ *   filled — the property has a value: `bg-card`, foreground text.
+ *   dimmed — nothing set yet: no fill, muted text naming the field.
  *
  * The chip becomes a Pressable when `onPress` is provided. Without onPress it
  * renders as a plain View — used for read-only chips.
@@ -33,14 +30,12 @@ export function AttributeChip({
   className,
 }: Props) {
   const containerClass = cn(
-    "h-6 flex-row items-center gap-1.5 rounded-full border px-2.5",
-    variant === "filled"
-      ? "border-border bg-transparent"
-      : "border-dashed border-muted-foreground/30 bg-transparent",
+    "h-11 max-w-full flex-row items-center gap-2 rounded-lg border border-border px-3.5",
+    variant === "filled" ? "bg-card" : "bg-transparent",
     className,
   );
   const labelClass = cn(
-    "text-xs",
+    "shrink text-sm",
     variant === "filled" ? "text-foreground" : "text-muted-foreground",
   );
 
@@ -57,8 +52,8 @@ export function AttributeChip({
     return (
       <Pressable
         onPress={onPress}
+        accessibilityRole="button"
         className={cn(containerClass, "active:bg-secondary")}
-        hitSlop={4}
       >
         {inner}
       </Pressable>

@@ -1,5 +1,7 @@
 {
   "title": "Inbox",
+  "unread_count": "{{count}} unread",
+  "swipe_hint": "Swipe a row left to archive it.",
   "empty": {
     "title": "You're all caught up",
     "body": "Notifications and agent updates appear here."

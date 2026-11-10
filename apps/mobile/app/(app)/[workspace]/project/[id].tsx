@@ -1,7 +1,7 @@
 /**
  * Project detail screen. Two views of the same record, switched in place:
  *
- *   Overview — header card, properties, resources, related issues
+ *   Overview — title block, property list, resources, related issues
  *   Board    — the kanban for this project's issues (`ProjectBoard`)
  *
  * The switch is a segmented control under the navigation bar rather than a
@@ -31,6 +31,7 @@ import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
 import { SegmentedControl } from "@/components/ui/segmented-control";
+import { TideTexture } from "@/components/ui/tide-texture";
 import { ProjectHeaderCard } from "@/components/project/project-header-card";
 import { ProjectPropertiesSection } from "@/components/project/project-properties-section";
 import { ProjectRelatedIssues } from "@/components/project/project-related-issues";
@@ -47,7 +48,6 @@ import { useCreatePin, useDeletePin } from "@/data/mutations/pins";
 import { useAuthStore } from "@/data/auth-store";
 import { useProjectRealtime } from "@/data/realtime/use-project-realtime";
 import { useWorkspaceStore } from "@/data/workspace-store";
-import { useResponsiveLayout } from "@/lib/responsive";
 import { useT } from "@/lib/i18n";
 
 type ProjectView = "overview" | "board";
@@ -57,7 +57,6 @@ export default function ProjectDetail() {
   const wsId = useWorkspaceStore((s) => s.currentWorkspaceId);
   const wsSlug = useWorkspaceStore((s) => s.currentWorkspaceSlug);
   const qc = useQueryClient();
-  const layout = useResponsiveLayout();
   const [view, setView] = useState<ProjectView>("overview");
 
   const detail = useQuery(projectDetailOptions(wsId, id));
@@ -167,12 +166,9 @@ export default function ProjectDetail() {
     { value: "board" as const, label: t("views.board") },
   ];
 
-  // One measure for the whole screen: 16 on the cover screen, 24 once the
-  // canvas is unfolded, so the control and the content share an edge.
-  const pageEdge = layout.isCompact ? 16 : 24;
-
   return (
     <SafeAreaView className="flex-1 bg-background" edges={["bottom"]}>
+      <TideTexture height={300} />
       <Stack.Screen
         options={{
           title: project?.title || t("navigation:routes.project"),
@@ -192,9 +188,9 @@ export default function ProjectDetail() {
         <View className="flex-1 items-center justify-center">
           <ActivityIndicator />
         </View>
-      ) : detail.error || projectMissing ? (
-        <View className="flex-1 items-center justify-center px-8 gap-3">
-          <Text className="text-[13px] text-destructive text-center">
+      ) : projectMissing ? (
+        <View className="gap-3 px-5 pt-6">
+          <Text className="text-[15px] leading-[21px] text-foreground">
             {t("errors.load_failed", {
               message:
                 detail.error instanceof Error
@@ -202,19 +198,17 @@ export default function ProjectDetail() {
                   : "not found",
             })}
           </Text>
-          <Button variant="outline" onPress={() => detail.refetch()}>
+          <Button
+            variant="outline"
+            className="min-h-11 self-start"
+            onPress={() => detail.refetch()}
+          >
             <Text>{t("common:actions.retry")}</Text>
           </Button>
         </View>
       ) : (
         <View className="flex-1">
-          <View
-            style={{
-              paddingHorizontal: pageEdge,
-              paddingTop: 12,
-              paddingBottom: 12,
-            }}
-          >
+          <View className="px-5 pb-3 pt-2">
             <SegmentedControl
               options={viewOptions}
               value={view}
@@ -226,12 +220,7 @@ export default function ProjectDetail() {
             <ProjectBoard projectId={id} />
           ) : (
             <ScrollView
-              contentContainerStyle={{
-                paddingHorizontal: pageEdge,
-                paddingTop: 4,
-                paddingBottom: 40,
-                gap: 12,
-              }}
+              contentContainerStyle={{ paddingBottom: 40 }}
               refreshControl={
                 <RefreshControl
                   refreshing={detail.isRefetching}
@@ -270,6 +259,7 @@ export default function ProjectDetail() {
                     });
                 }}
               />
+              <View className="h-4" />
               <ProjectResourcesSection
                 projectId={id}
                 onAdd={() => {
@@ -280,7 +270,6 @@ export default function ProjectDetail() {
                     });
                 }}
               />
-              <View className="h-2" />
               <ProjectRelatedIssues projectId={id} />
             </ScrollView>
           )}

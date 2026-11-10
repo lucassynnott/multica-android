@@ -45,34 +45,39 @@ export function useMoveIssue() {
         after_id: vars.afterId,
       }),
     onMutate: async (vars) => {
-      const key = issueKeys.list(wsId);
-      await qc.cancelQueries({ queryKey: key });
-      const prev = qc.getQueryData<Issue[]>(key);
-      if (prev) {
-        qc.setQueryData<Issue[]>(
-          key,
-          prev.map((issue) =>
-            issue.id === vars.issueId
-              ? {
-                  ...issue,
-                  ...(vars.status ? { status: vars.status } : {}),
-                  position: vars.optimisticPosition,
-                  ...(vars.status
-                    ? {
-                        status_category: statusCategoryOfKey(
-                          vars.status,
-                        ) as Issue["status_category"],
-                      }
-                    : {}),
-                }
-              : issue,
-          ),
-        );
-      }
-      return { prev, key };
+      // The workspace list and the per-project lists the project board
+      // renders both live under this prefix. Patching only the exact
+      // workspace key left a card moved on
+      // a project board sitting in its old column for the whole round trip.
+      const prefix = issueKeys.list(wsId);
+      await qc.cancelQueries({ queryKey: prefix });
+      const snapshots = qc.getQueriesData<Issue[]>({ queryKey: prefix });
+      qc.setQueriesData<Issue[]>({ queryKey: prefix }, (old) =>
+        Array.isArray(old)
+          ? old.map((issue) =>
+              issue.id === vars.issueId
+                ? {
+                    ...issue,
+                    ...(vars.status ? { status: vars.status } : {}),
+                    position: vars.optimisticPosition,
+                    ...(vars.status
+                      ? {
+                          status_category: statusCategoryOfKey(
+                            vars.status,
+                          ) as Issue["status_category"],
+                        }
+                      : {}),
+                  }
+                : issue,
+            )
+          : old,
+      );
+      return { snapshots };
     },
     onError: (_error, _vars, ctx) => {
-      if (ctx?.prev) qc.setQueryData(ctx.key, ctx.prev);
+      for (const [key, data] of ctx?.snapshots ?? []) {
+        qc.setQueryData(key, data);
+      }
     },
     onSettled: (server, _error, vars) => {
       if (server) {

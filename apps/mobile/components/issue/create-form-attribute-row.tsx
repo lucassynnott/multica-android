@@ -25,6 +25,8 @@ import { useWorkspaceStore } from "@/data/workspace-store";
 import { PRIORITY_LABEL } from "@/lib/issue-status";
 import { useIssueStatuses } from "@/lib/use-issue-statuses";
 import { useT } from "@/lib/i18n";
+import { THEME } from "@/lib/theme";
+import { useColorScheme } from "@/lib/use-color-scheme";
 
 /**
  * Picker fields the new-issue draft form can open. Bound to a typed map
@@ -56,6 +58,8 @@ export function CreateFormAttributeRow() {
   const project = useNewIssueDraftStore((s) => s.project);
 
   const { getName } = useActorLookup();
+  const { colorScheme } = useColorScheme();
+  const fg = THEME[colorScheme].foreground;
   // The draft can hold a custom status the user picked in the sheet. (MUL-6243)
   const { categoryOf, colorOf, labelOf, iconOf } = useIssueStatuses();
   const assigneeLabel = assignee
@@ -73,7 +77,7 @@ export function CreateFormAttributeRow() {
   };
 
   return (
-    <View>
+    <View className="mt-2 border-t border-border pt-4">
       <View className="flex-row flex-wrap gap-2">
         <AttributeChip
           icon={
@@ -81,7 +85,7 @@ export function CreateFormAttributeRow() {
               status={status}
               category={categoryOf(status)}
               icon={iconOf(status)} color={colorOf(status)}
-              size={12}
+              size={16}
             />
           }
           label={String(labelOf(status))}
@@ -89,7 +93,11 @@ export function CreateFormAttributeRow() {
           onPress={() => open("status")}
         />
         <AttributeChip
-          icon={<PriorityIcon priority={priority} />}
+          icon={
+            priority === "none" ? null : (
+              <PriorityIcon priority={priority} size={16} />
+            )
+          }
           label={priorityLabel}
           variant={priority === "none" ? "dimmed" : "filled"}
           onPress={() => open("priority")}
@@ -100,16 +108,10 @@ export function CreateFormAttributeRow() {
               <ActorAvatar
                 type={assignee.type}
                 id={assignee.id}
-                size={16}
+                size={22}
                 showPresence
               />
-            ) : (
-              <Ionicons
-                name="person-circle-outline"
-                size={16}
-                color="#a1a1aa"
-              />
-            )
+            ) : null
           }
           label={assigneeLabel}
           variant={assignee ? "filled" : "dimmed"}
@@ -117,11 +119,9 @@ export function CreateFormAttributeRow() {
         />
         <AttributeChip
           icon={
-            <Ionicons
-              name="calendar-outline"
-              size={14}
-              color={dueDate ? undefined : "#a1a1aa"}
-            />
+            dueDate ? (
+              <Ionicons name="calendar-outline" size={16} color={fg} />
+            ) : null
           }
           label={
             dueDate
@@ -135,9 +135,7 @@ export function CreateFormAttributeRow() {
           icon={
             project ? (
               <ProjectIcon icon={project.icon} size="sm" />
-            ) : (
-              <Ionicons name="folder-outline" size={14} color="#a1a1aa" />
-            )
+            ) : null
           }
           label={project?.title ?? t("common:fields.project")}
           variant={project ? "filled" : "dimmed"}

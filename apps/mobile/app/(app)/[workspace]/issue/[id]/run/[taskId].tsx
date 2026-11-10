@@ -37,7 +37,7 @@ export default function RunTranscriptRoute() {
     return (
       <View className="flex-1 items-center justify-center gap-3">
         <ActivityIndicator />
-        <Text className="text-sm text-muted-foreground">
+        <Text className="text-[13px] text-muted-foreground">
           {t("runs.transcript.loading")}
         </Text>
       </View>
@@ -69,13 +69,13 @@ export default function RunTranscriptRoute() {
       task={task}
       items={transcriptQuery.data ?? []}
       header={
-        <View className="flex-row items-start gap-3 rounded-lg bg-muted/40 px-3 py-3">
+        <View className="flex-row items-start gap-3 border-b border-border pb-4">
           <ActorAvatar type="agent" id={task.agent_id} size={32} showPresence />
-          <View className="min-w-0 flex-1 gap-1">
-            <Text className="text-sm font-semibold text-foreground">
+          <View className="min-w-0 flex-1 gap-0.5">
+            <Text className="text-[15px] font-semibold leading-[21px] text-foreground">
               {getName("agent", task.agent_id)}
             </Text>
-            <Text className="text-sm text-muted-foreground">{summary}</Text>
+            <Text className="text-[13px] text-muted-foreground">{summary}</Text>
             <Text className={statusClass(task.status)}>
               {t(`runs.status.${task.status}`)}
             </Text>
@@ -95,13 +95,15 @@ function StateMessage({
 }) {
   return (
     <View className="flex-1 items-center justify-center gap-4 px-8">
-      <Text className="text-center text-sm text-muted-foreground">{text}</Text>
+      <Text className="text-center text-[15px] leading-[21px] text-muted-foreground">
+        {text}
+      </Text>
       {children}
     </View>
   );
 }
 
 function statusClass(status: string): string {
-  if (status === "failed") return "text-xs text-destructive";
-  return "text-xs text-muted-foreground";
+  if (status === "failed") return "font-mono text-xs text-destructive";
+  return "font-mono text-xs text-muted-foreground";
 }

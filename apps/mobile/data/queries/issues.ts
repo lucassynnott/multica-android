@@ -20,16 +20,14 @@ export { issueKeys } from "./issue-keys";
  *
  * Cache shape: flat `Issue[]` (we strip `.issues` from the response) so
  * the WS updaters can patch this list with the same shape as
- * myIssueListOptions. Pagination is deferred — web's `IssuesPage` also
- * fetches all in one shot today (`packages/views/issues/components/
- * issues-page.tsx:30`).
+ * myIssueListOptions. The endpoint pages at 100 rows, so the read walks
+ * every page (`api.listAllIssues`) to keep that flat, complete shape.
  */
 export const issueListOptions = (wsId: string | null) =>
   queryOptions({
     queryKey: issueKeys.list(wsId),
-    queryFn: async ({ signal }) => {
-      const res = await api.listIssues({}, { signal });
-      return res.issues;
+    queryFn: ({ signal }) => {
+      return api.listAllIssues({}, { signal });
     },
     enabled: !!wsId,
   });

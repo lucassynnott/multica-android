@@ -9,10 +9,9 @@
  * router.back().
  */
 import { useRef } from "react";
-import { View } from "react-native";
+import { Pressable, View } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
 import {
   DueDatePickerBody,
@@ -62,19 +61,31 @@ function DueDateHeader({
 }) {
   const { t } = useT("issues");
   return (
-    <View className="flex-row items-center justify-between px-4 pb-2 pt-4">
-      <Text className="text-base font-semibold text-foreground">
+    <View className="flex-row items-center justify-between pb-2 pl-5 pr-3 pt-3">
+      <Text className="text-xl font-semibold text-foreground">
         {t("common:fields.due_date")}
       </Text>
-      <View className="flex-row items-center gap-2">
+      <View className="flex-row items-center gap-1">
         {hasValue ? (
-          <Button variant="ghost" size="sm" onPress={onClear}>
-            <Text className="text-destructive">{t("picker.clear")}</Text>
-          </Button>
+          <Pressable
+            onPress={onClear}
+            accessibilityRole="button"
+            className="h-11 justify-center rounded-lg px-3 active:bg-secondary"
+          >
+            <Text className="text-[15px] text-destructive">
+              {t("picker.clear")}
+            </Text>
+          </Pressable>
         ) : null}
-        <Button size="sm" onPress={onDone}>
-          <Text>{t("common:actions.done")}</Text>
-        </Button>
+        <Pressable
+          onPress={onDone}
+          accessibilityRole="button"
+          className="h-10 justify-center rounded-lg bg-primary px-4 active:opacity-80"
+        >
+          <Text className="text-[15px] font-semibold text-primary-foreground">
+            {t("common:actions.done")}
+          </Text>
+        </Pressable>
       </View>
     </View>
   );

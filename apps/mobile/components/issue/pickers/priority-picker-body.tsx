@@ -2,8 +2,8 @@
  * Pure picker body for issue priority — single-select over the 5 priority
  * enum values. See status-picker-body.tsx for the split rationale.
  *
- * Nova layer: `PickerRow` geometry (12pt padding, 14/500 label, 18px leading
- * icon), selected row on `bg-secondary` with one trailing check.
+ * Graphite: shared `PickerRow` geometry with an 18px leading icon; the
+ * selected row carries one trailing check in the accent.
  */
 import { ScrollView, View } from "react-native";
 import type { IssuePriority } from "@multica/core/types";

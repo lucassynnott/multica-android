@@ -671,6 +671,39 @@ class ApiClient {
     });
   }
 
+  /**
+   * Every issue matching `params`, across pages.
+   *
+   * `GET /api/issues` returns at most 100 rows per request whatever `limit`
+   * says, so a single call silently truncated every list, board and My
+   * Issues view in a workspace with more than 100 issues. Walks `offset`
+   * until the reported `total` is reached. The page cap bounds a runaway
+   * loop if the server ever stops reporting a consistent total.
+   */
+  async listAllIssues(
+    params: ListIssuesParams = {},
+    opts?: { signal?: AbortSignal },
+  ): Promise<Issue[]> {
+    const PAGE = 100;
+    const MAX_PAGES = 50;
+    const seen = new Set<string>();
+    const all: Issue[] = [];
+    for (let page = 0; page < MAX_PAGES; page++) {
+      const res = await this.listIssues(
+        { ...params, limit: PAGE, offset: page * PAGE },
+        opts,
+      );
+      // A row can shift between pages when an issue is created mid-walk.
+      for (const issue of res.issues) {
+        if (seen.has(issue.id)) continue;
+        seen.add(issue.id);
+        all.push(issue);
+      }
+      if (res.issues.length < PAGE || (page + 1) * PAGE >= res.total) break;
+    }
+    return all;
+  }
+
   /** Workspace-wide issue search. Backend `GET /api/issues/search` with
    *  workspace resolved by the `X-Workspace-Slug` middleware (same as
    *  `listIssues`). Caller passes its own `AbortController.signal` so the

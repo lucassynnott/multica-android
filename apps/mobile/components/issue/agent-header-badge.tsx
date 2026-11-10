@@ -53,7 +53,8 @@ export function AgentHeaderBadge({ issueId }: Props) {
       }}
       hitSlop={8}
       accessibilityLabel={t("a11y.agent_working")}
-      className="flex-row items-center gap-1.5 px-2 py-1 active:opacity-60"
+      accessibilityRole="button"
+      className="min-h-11 flex-row items-center gap-1.5 px-2 active:opacity-60"
     >
       <AvatarStack actors={actors} max={2} size={20} />
       <PulseDot size={6} />

@@ -2,8 +2,8 @@
  * Mobile DropdownMenu — styled wrapper around @rn-primitives/dropdown-menu.
  *
  * Follows the RNR / shadcn-style API: composable Root + Trigger + Portal +
- * Overlay + Content + Item. Defaults match shadcn (bg-popover, p-1, rounded,
- * border, shadow). Default open / close animation is the primitive's own
+ * Overlay + Content + Item. Graphite: a bordered `bg-popover` panel with a
+ * hairline and no shadow; items are 44dp rows at the 15dp body size. Default open / close animation is the primitive's own
  * fade — no custom Reanimated layer.
  *
  * The Overlay is transparent + closeOnPress: tapping anywhere outside the
@@ -56,7 +56,7 @@ function DropdownMenuContent({
         align={align}
         sideOffset={sideOffset}
         className={cn(
-          "bg-popover border-border z-50 min-w-[12rem] overflow-hidden rounded-md border p-1 shadow-md shadow-black/10",
+          "bg-popover border-border z-50 min-w-[12rem] overflow-hidden rounded-lg border p-1",
           className,
         )}
         {...props}
@@ -77,7 +77,7 @@ function DropdownMenuItem({
   return (
     <TextClassContext.Provider
       value={cn(
-        "text-sm",
+        "text-[15px] leading-[21px]",
         variant === "destructive"
           ? "text-destructive group-active:text-destructive"
           : "text-popover-foreground group-active:text-accent-foreground",
@@ -85,7 +85,7 @@ function DropdownMenuItem({
     >
       <DropdownMenuPrimitive.Item
         className={cn(
-          "group flex-row items-center gap-2 rounded-sm px-2 py-2 active:bg-accent",
+          "group min-h-11 flex-row items-center gap-2 rounded-sm px-3 py-2 active:bg-secondary",
           variant === "destructive" && "active:bg-destructive/10",
           inset && "pl-8",
           className,
@@ -106,7 +106,7 @@ function DropdownMenuLabel({
   return (
     <DropdownMenuPrimitive.Label
       className={cn(
-        "text-muted-foreground px-2 py-1.5 text-xs font-medium",
+        "text-muted-foreground px-3 py-1.5 text-[13px] font-semibold",
         inset && "pl-8",
         className,
       )}

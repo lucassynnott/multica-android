@@ -6,9 +6,13 @@
  * Behavioral parity rules (apps/mobile/CLAUDE.md):
  *   - Same actor type → same name → same initials. Lookup is shared via
  *     useActorLookup which reads the same MemberWithUser / Agent lists.
- *   - Agents get distinct visual treatment (brand-tinted background) to
- *     match web's "agents render with distinct styling" rule from the
- *     repo-root CLAUDE.md "Agent Assignees" section.
+ *   - Agents get distinct visual treatment, matching web's "agents render
+ *     with distinct styling" rule from the repo-root CLAUDE.md "Agent
+ *     Assignees" section. In Graphite that treatment is SHAPE (DESIGN.md,
+ *     "Actors"): an agent keeps its own emoji or image on a square tile
+ *     (`bg-secondary`, hairline border), a person is a circle with a photo
+ *     or initial. The shape tells agent from human, the icon tells agents
+ *     apart, and no accent colour is spent on it.
  *
  * Presence dot: opt-in via `showPresence`. Mirrors web's `showStatusDot`
  * (`packages/views/common/actor-avatar.tsx:51`). The prop is opt-in (default
@@ -97,10 +101,21 @@ function BareAvatar({
       ? THEME.dark.mutedForeground
       : THEME.light.mutedForeground;
 
-  // Squad gets a soft-square tile (matches web actor-avatar.tsx:42 which uses
-  // rounded-md) so a group never reads as a single person at a glance.
-  // Everyone else stays round.
-  const radius = type === "squad" ? Math.round(size * 0.22) : size / 2;
+  const isAgent = type === "agent";
+  // Agents and squads sit on a square tile; people (and the system glyph)
+  // stay round. The tile corner tops out at the 10dp panel radius and
+  // shrinks with the avatar — a fixed 10dp on a 20dp row avatar would be a
+  // circle again, which is exactly the distinction this shape carries
+  // (mockups: 6dp at 20–24dp, 10dp at 44dp).
+  const radius =
+    isAgent || type === "squad"
+      ? Math.min(10, Math.round(size * 0.27))
+      : size / 2;
+  // Square tiles carry a hairline so they hold their edge on `bg-secondary`
+  // rows and next to each other.
+  const tileClass = isAgent
+    ? "bg-secondary border border-border"
+    : "bg-muted";
 
   // URL lookup runs BEFORE the squad/system icon fallbacks so a squad with
   // an avatar_url renders its image instead of the generic group glyph.
@@ -129,11 +144,15 @@ function BareAvatar({
     return (
       <View
         style={{ width: size, height: size, borderRadius: radius }}
-        className="items-center justify-center bg-muted"
+        className={cn("items-center justify-center", tileClass)}
       >
         <Text
           accessibilityLabel={type === "system" ? "" : displayName}
-          style={{ fontSize: Math.round(size * 0.58), lineHeight: size }}
+          style={{
+            fontSize: Math.round(size * 0.58),
+            // The tile's hairline eats 2dp of the box; keep the glyph centred.
+            lineHeight: isAgent ? size - 2 : size,
+          }}
         >
           {emoji}
         </Text>
@@ -147,7 +166,7 @@ function BareAvatar({
         source={{ uri: url }}
         accessibilityLabel={displayName}
         style={{ width: size, height: size, borderRadius: radius }}
-        className="bg-muted"
+        className={tileClass}
       />
     );
   }
@@ -174,20 +193,25 @@ function BareAvatar({
     );
   }
 
-  const isAgent = type === "agent";
+  // No avatar on record: initials. An agent still gets its square tile.
   return (
     <View
       style={{ width: size, height: size, borderRadius: radius }}
-      className={cn(
-        "items-center justify-center",
-        isAgent ? "bg-brand/15" : "bg-muted",
-      )}
+      className={cn("items-center justify-center", tileClass)}
     >
       <Text
+        allowFontScaling={false}
         className={cn(
-          "text-xs font-medium",
-          isAgent ? "text-brand" : "text-muted-foreground",
+          "font-semibold",
+          isAgent ? "text-foreground" : "text-muted-foreground",
         )}
+        // Scales with the avatar: a fixed 12dp initial overflowed the 16–20dp
+        // avatars used on rows and was lost in the 44dp account avatar.
+        style={{
+          fontSize: Math.max(9, Math.round(size * 0.4)),
+          lineHeight: Math.round(size * 0.52),
+          includeFontPadding: false,
+        }}
       >
         {getInitials(displayName)}
       </Text>

@@ -14,6 +14,7 @@
  */
 import { useMemo } from "react";
 import { FlatList, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import type {
   Agent,
@@ -31,6 +32,8 @@ import { useWorkspaceStore } from "@/data/workspace-store";
 import { useScrollToTopOnChange } from "@/lib/use-scroll-to-top-on-change";
 import { isAgentRuntimeBound } from "@/lib/is-agent-runtime-bound";
 import { useT } from "@/lib/i18n";
+import { THEME } from "@/lib/theme";
+import { useColorScheme } from "@/lib/use-color-scheme";
 
 const AVATAR_SIZE = 28;
 
@@ -64,6 +67,7 @@ function isRowSelected(value: AssigneeValue, row: Row): boolean {
 export function AssigneePickerBody({ value, query, onChange }: Props) {
   const wsId = useWorkspaceStore((s) => s.currentWorkspaceId);
   const { t } = useT("issues");
+  const { colorScheme } = useColorScheme();
   const { data: members = [] } = useQuery(memberListOptions(wsId));
   const { data: agents = [] } = useQuery(agentListOptions(wsId));
   const { data: squads = [] } = useQuery(squadListOptions(wsId));
@@ -174,9 +178,11 @@ export function AssigneePickerBody({ value, query, onChange }: Props) {
             }
             leading={
               item.kind === "unassigned" ? (
-                <View className="h-7 w-7 items-center justify-center rounded-full border border-dashed border-muted-foreground/40">
-                  <Text className="text-xs text-muted-foreground">∅</Text>
-                </View>
+                <Ionicons
+                  name="person-outline"
+                  size={18}
+                  color={THEME[colorScheme].mutedForeground}
+                />
               ) : item.kind === "member" ? (
                 <ActorAvatar
                   type="member"
@@ -193,8 +199,8 @@ export function AssigneePickerBody({ value, query, onChange }: Props) {
         );
       }}
       ListEmptyComponent={
-        <View className="px-3 py-8 items-center">
-          <Text className="text-sm text-muted-foreground">
+        <View className="items-center px-5 py-8">
+          <Text className="text-[13px] text-muted-foreground">
             {t("picker.no_matches")}
           </Text>
         </View>

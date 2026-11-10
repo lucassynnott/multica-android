@@ -6,13 +6,16 @@
     "chat": "Chat",
     "more": "More",
     "board": "Board",
-    "projects": "Projects"
+    "projects": "Projects",
+    "mine": "Mine"
   },
   "more_menu": {
     "pinned": "Pinned",
     "issues": "Issues",
     "projects": "Projects",
-    "account_settings": "Account settings"
+    "agents": "Agents",
+    "account_settings": "Account settings",
+    "notifications": "Notifications"
   },
   "routes": {
     "issues": "Issues",

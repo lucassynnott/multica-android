@@ -23,7 +23,7 @@ import {
 } from "@multica/core/notification-preferences/routes";
 import { Text } from "@/components/ui/text";
 import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
+import { ListSectionLabel } from "@/components/ui/list-row";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,7 +43,7 @@ function RouteMark({ route, color }: { route: NotificationRoute; color: string }
   if (route === "action") {
     return (
       <View className="size-4 items-center justify-center">
-        <View className="size-1.5 rounded-full bg-brand" />
+        <View className="size-1.5 rounded-full bg-primary" />
       </View>
     );
   }
@@ -80,7 +80,7 @@ export default function NotificationsSettingsScreen() {
   if (error) {
     return (
       <View className="flex-1 items-center justify-center bg-background px-6">
-        <Text className="text-sm text-destructive text-center">
+        <Text className="text-[13px] text-destructive text-center">
           {t("errors.load_failed")}
         </Text>
       </View>
@@ -92,7 +92,7 @@ export default function NotificationsSettingsScreen() {
   return (
     <ScrollView
       className="flex-1 bg-background"
-      contentContainerClassName="px-4 pt-4 pb-6 gap-4"
+      contentContainerClassName="pb-6"
     >
       <Section
         title={t("routing.title")}
@@ -104,27 +104,27 @@ export default function NotificationsSettingsScreen() {
             onPress={() =>
               mutation.mutate(withDefaultNotificationRoutes(preferences))
             }
+            hitSlop={12}
             className="flex-row items-center gap-1 active:opacity-60"
             style={{ opacity: routesAreDefault ? 0.4 : 1 }}
           >
             <Ionicons name="refresh" size={14} color={theme.mutedForeground} />
-            <Text className="text-xs text-muted-foreground">
+            <Text className="text-[13px] text-muted-foreground">
               {t("routing.reset")}
             </Text>
           </Pressable>
         }
       >
-        {NOTIFICATION_ROUTE_KINDS.map((kind, idx) => {
+        {NOTIFICATION_ROUTE_KINDS.map((kind) => {
           const route = resolveNotificationRoute(preferences, kind);
-          const isLast = idx === NOTIFICATION_ROUTE_KINDS.length - 1;
           return (
             <View key={kind.key}>
-              <View className="flex-row items-center px-3 py-3 gap-3">
+              <View className="min-h-[52px] flex-row items-center gap-3 border-b border-border px-5 py-2.5">
                 <View className="flex-1">
-                  <Text className="text-sm font-medium text-foreground">
+                  <Text className="text-[15px] leading-[21px] text-foreground">
                     {t(`routing.kinds.${kind.key}.label`)}
                   </Text>
-                  <Text className="text-xs text-muted-foreground mt-0.5">
+                  <Text className="text-[13px] text-muted-foreground">
                     {t(`routing.kinds.${kind.key}.description`)}
                   </Text>
                 </View>
@@ -133,7 +133,8 @@ export default function NotificationsSettingsScreen() {
                     <Pressable
                       accessibilityRole="button"
                       accessibilityLabel={t(`routing.kinds.${kind.key}.label`)}
-                      className="flex-row items-center gap-1.5 rounded-md border border-input px-2.5 py-1 active:bg-accent"
+                      hitSlop={{ top: 6, bottom: 6 }}
+                      className="h-9 flex-row items-center gap-1.5 rounded-lg border border-border px-2.5 active:bg-secondary"
                     >
                       <RouteMark route={route} color={theme.mutedForeground} />
                       <Text
@@ -172,10 +173,10 @@ export default function NotificationsSettingsScreen() {
                           />
                         </View>
                         <View className="flex-1">
-                          <Text className="text-sm">
+                          <Text className="text-[15px] leading-[21px]">
                             {t(`routing.routes.${value}.label`)}
                           </Text>
-                          <Text className="text-xs text-muted-foreground">
+                          <Text className="text-[13px] text-muted-foreground">
                             {t(`routing.routes.${value}.description`)}
                           </Text>
                         </View>
@@ -183,7 +184,7 @@ export default function NotificationsSettingsScreen() {
                           <Ionicons
                             name="checkmark"
                             size={16}
-                            color={theme.foreground}
+                            color={theme.primary}
                           />
                         ) : null}
                       </DropdownMenuItem>
@@ -191,19 +192,18 @@ export default function NotificationsSettingsScreen() {
                   </DropdownMenuContent>
                 </DropdownMenu>
               </View>
-              {!isLast ? <Separator /> : null}
             </View>
           );
         })}
       </Section>
 
       <Section title={t("groups.system")}>
-        <View className="flex-row items-center px-3 py-3 gap-3">
+        <View className="min-h-[60px] flex-row items-center gap-3 border-b border-border px-5 py-2.5">
           <View className="flex-1">
-            <Text className="text-sm font-medium text-foreground">
+            <Text className="text-[15px] leading-[21px] text-foreground">
               {t("groups.system_notifications")}
             </Text>
-            <Text className="text-xs text-muted-foreground mt-0.5">
+            <Text className="text-[13px] text-muted-foreground">
               {t("groups.system_description")}
             </Text>
           </View>
@@ -234,23 +234,15 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <View className="gap-2">
-      <View>
-        <View className="flex-row items-center justify-between gap-3">
-          <Text className="text-[11px] font-medium text-muted-foreground">
-            {title}
-          </Text>
-          {action}
-        </View>
-        {description ? (
-          <Text className="text-xs text-muted-foreground mt-1">
-            {description}
-          </Text>
-        ) : null}
-      </View>
-      <View className="rounded-lg border border-border bg-card overflow-hidden">
-        {children}
-      </View>
+    <View>
+      <ListSectionLabel trailing={action}>{title}</ListSectionLabel>
+      {description ? (
+        <Text className="px-5 pb-2 text-[13px] text-muted-foreground">
+          {description}
+        </Text>
+      ) : null}
+      {/* Rows carry their own bottom hairline; this one opens the group. */}
+      <View className="border-t border-border">{children}</View>
     </View>
   );
 }

@@ -77,6 +77,13 @@ module.exports = {
       // Keep one mobile source for both NativeWind and inline RN styles; the
       // radius guard verifies these resolved values against the web ladder.
       borderRadius,
+      // Native family names registered by the expo-font plugin in
+      // app.config.ts. Weight classes (font-medium, font-semibold…) select
+      // the matching file.
+      fontFamily: {
+        sans: ["Schibsted Grotesk"],
+        mono: ["JetBrains Mono"],
+      },
       borderWidth: {
         hairline: hairlineWidth(),
       },

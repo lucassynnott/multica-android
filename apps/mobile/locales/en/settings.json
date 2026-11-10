@@ -21,7 +21,9 @@
     "theme": "Theme",
     "light": "Light",
     "dark": "Dark",
-    "system": "System"
+    "system": "System",
+    "texture": "Background texture",
+    "texture_description": "The moving dot pattern behind lists"
   },
   "language": {
     "title": "Language",

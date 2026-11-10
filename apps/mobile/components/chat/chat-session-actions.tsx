@@ -27,6 +27,7 @@ export function ChatSessionActions({
       {showMore ? (
         <IconButton
           name="ellipsis-horizontal"
+          hitSlop={6}
           onPress={onMorePress}
           accessibilityLabel={t("a11y.session_actions")}
         />
@@ -34,6 +35,7 @@ export function ChatSessionActions({
       <IconButton
         name="add"
         iconSize={24}
+        hitSlop={6}
         onPress={onNewPress}
         accessibilityLabel={t("a11y.new_chat")}
       />

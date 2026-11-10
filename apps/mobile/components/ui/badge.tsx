@@ -1,11 +1,13 @@
 /**
- * Badge — shadcn (Nova) badge, ported to RN.
+ * Badge — a small label chip, in Graphite.
  *
- * Reference: shadcn/ui `components/ui/badge.tsx` in the Nova style used by
- * bundui/shadcn-ui-kit-dashboard: `h-5 w-fit items-center justify-center gap-1
- * overflow-hidden rounded-4xl border border-transparent px-2 py-0.5 text-xs
- * font-medium`, with `success` / `info` / `warning` variants carrying a tinted
- * background plus a 1 px saturated border.
+ * Graphite has one accent, so a badge never carries its own hue: `default` is
+ * the accent fill (use it sparingly, it reads as "primary"), `destructive` is
+ * accent text on a hairline, and every other variant is neutral. `success` /
+ * `info` / `warning` stay as variant names so existing callers compile, but
+ * they draw the same neutral chip — status and priority are told apart by
+ * their icons, not by a fill. Corners are square-ish (`rounded-sm`): a pill is
+ * reserved for people and status dots.
  *
  * This replaces the per-screen status chips the app used to hand-roll: one
  * badge, one height, one radius, so a status reads the same on a board card, in
@@ -18,17 +20,17 @@ import { cn } from "@/lib/utils";
 import { Text } from "@/components/ui/text";
 
 const badgeVariants = cva(
-  "h-5 flex-row items-center justify-center gap-1 self-start overflow-hidden rounded-full border px-2",
+  "h-5 flex-row items-center justify-center gap-1 self-start overflow-hidden rounded-sm border px-1.5",
   {
     variants: {
       variant: {
         default: "border-transparent bg-primary",
         secondary: "border-transparent bg-secondary",
         outline: "border-border bg-transparent",
-        destructive: "border-transparent bg-destructive/10",
-        success: "border-green-400 bg-green-50 dark:border-green-700 dark:bg-green-900/60",
-        info: "border-blue-400 bg-blue-50 dark:border-blue-700 dark:bg-blue-900/60",
-        warning: "border-orange-400 bg-orange-50 dark:border-orange-700 dark:bg-orange-900/60",
+        destructive: "border-border bg-transparent",
+        success: "border-transparent bg-secondary",
+        info: "border-transparent bg-secondary",
+        warning: "border-transparent bg-secondary",
       },
     },
     defaultVariants: { variant: "default" },
@@ -42,9 +44,9 @@ const badgeTextVariants = cva("text-xs font-medium leading-none", {
       secondary: "text-secondary-foreground",
       outline: "text-foreground",
       destructive: "text-destructive",
-      success: "text-green-800 dark:text-green-100",
-      info: "text-blue-800 dark:text-blue-100",
-      warning: "text-orange-800 dark:text-orange-100",
+      success: "text-secondary-foreground",
+      info: "text-secondary-foreground",
+      warning: "text-secondary-foreground",
     },
   },
   defaultVariants: { variant: "default" },
@@ -52,7 +54,7 @@ const badgeTextVariants = cva("text-xs font-medium leading-none", {
 
 /** Numeric badge for counts — tab bars, column headers, unread pills. */
 const countVariants = cva(
-  "min-w-4.5 h-4.5 items-center justify-center rounded-full bg-secondary px-1.5",
+  "min-w-4.5 h-4.5 items-center justify-center",
 );
 
 type BadgeVariantValue = NonNullable<VariantProps<typeof badgeVariants>["variant"]>;
@@ -98,11 +100,11 @@ function BadgeBase({ label, variant = "default", className, textClassName, child
 
 const Badge = Object.assign(BadgeBase, { Text: BadgeText });
 
-/** Count pill — tabular figures, muted, no border. Reads as metadata, not status. */
+/** Count — mono figures, muted, no chip behind them. Reads as metadata, not status. */
 function CountBadge({ value, className }: { value: number | string; className?: string }) {
   return (
     <View className={cn(countVariants(), className)}>
-      <Text className="text-[11px] font-medium text-muted-foreground tabular-nums">{value}</Text>
+      <Text className="font-mono text-xs text-muted-foreground">{value}</Text>
     </View>
   );
 }

@@ -21,7 +21,9 @@
     "theme": "主題",
     "light": "淺色",
     "dark": "深色",
-    "system": "跟隨系統"
+    "system": "跟隨系統",
+    "texture": "背景紋理",
+    "texture_description": "列表背後緩慢移動的點陣圖案"
   },
   "language": {
     "title": "語言",

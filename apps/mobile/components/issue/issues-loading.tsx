@@ -18,12 +18,12 @@ export function IssuesLoading() {
     <View className="pt-2">
       {Array.from({ length: 2 }).map((_, sectionIdx) => (
         <View key={sectionIdx} className="pb-2">
-          <View className="px-4 py-2 flex-row items-center gap-2">
+          <View className="min-h-11 flex-row items-center gap-2 border-t border-border px-5">
             <Skeleton className="size-3.5 rounded-full" />
             <Skeleton className="h-3 w-20" />
           </View>
           {Array.from({ length: 3 }).map((_, rowIdx) => (
-            <View key={rowIdx} className="flex-row items-center gap-3 px-4 py-3">
+            <View key={rowIdx} className="min-h-11 flex-row items-center gap-3 px-5 py-2.5">
               <Skeleton className="size-3.5 rounded-full" />
               <Skeleton className="h-3 w-14" />
               <Skeleton className="h-3.5 flex-1" />

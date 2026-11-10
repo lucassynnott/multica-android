@@ -1,5 +1,6 @@
 /**
- * The project completion bar: one 6 dp track, one brand fill, no label.
+ * The project completion bar: a 2dp hairline track with a foreground fill, no
+ * label. Not the accent — vermilion is for actions, unread and urgent.
  *
  * Shared by the project list card and the project header card so the same
  * `done_count / issue_count` reads identically in both places — and so the
@@ -16,9 +17,9 @@ interface Props {
 export function ProjectProgress({ done, total }: Props) {
   const pct = total > 0 ? Math.min(100, Math.round((done / total) * 100)) : 0;
   return (
-    <View className="h-1.5 w-full overflow-hidden rounded-full bg-secondary">
+    <View className="h-0.5 w-full overflow-hidden rounded-full bg-border">
       <View
-        className="h-full rounded-full bg-brand"
+        className="h-full rounded-full bg-foreground"
         style={{ width: `${pct}%` }}
       />
     </View>

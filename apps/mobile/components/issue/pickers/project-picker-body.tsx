@@ -14,7 +14,8 @@ import type { Project } from "@multica/core/types";
 import { Text } from "@/components/ui/text";
 import { ProjectIcon } from "@/components/ui/project-icon";
 import { PickerRow } from "@/components/ui/picker-row";
-import { MOBILE_PLACEHOLDER_COLOR } from "@/components/ui/input-tokens";
+import { THEME } from "@/lib/theme";
+import { useColorScheme } from "@/lib/use-color-scheme";
 import { projectListOptions } from "@/data/queries/projects";
 import { useWorkspaceStore } from "@/data/workspace-store";
 import { useScrollToTopOnChange } from "@/lib/use-scroll-to-top-on-change";
@@ -31,6 +32,7 @@ interface Props {
 export function ProjectPickerBody({ value, query, onChange }: Props) {
   const wsId = useWorkspaceStore((s) => s.currentWorkspaceId);
   const { t } = useT("issues");
+  const { colorScheme } = useColorScheme();
   const { data: projects = [] } = useQuery(projectListOptions(wsId));
   const listRef = useScrollToTopOnChange(query);
 
@@ -88,7 +90,7 @@ export function ProjectPickerBody({ value, query, onChange }: Props) {
               <Ionicons
                 name="close-circle-outline"
                 size={18}
-                color={MOBILE_PLACEHOLDER_COLOR}
+                color={THEME[colorScheme].mutedForeground}
               />
             ) : (
               <ProjectIcon icon={item.project.icon} size="sm" />
@@ -97,8 +99,8 @@ export function ProjectPickerBody({ value, query, onChange }: Props) {
         />
       )}
       ListEmptyComponent={
-        <View className="px-3 py-8 items-center">
-          <Text className="text-sm text-muted-foreground text-center">
+        <View className="items-center px-5 py-8">
+          <Text className="text-center text-[13px] text-muted-foreground">
             {query
               ? t("picker.no_matches")
               : t("picker.no_projects")}

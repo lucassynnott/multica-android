@@ -126,6 +126,7 @@ export function useCommentLongPress(
               );
             useReplyTargetStore.getState().setTarget({
               commentId: entry.id,
+              issueId,
               actorName: actorName || t("comments.fallback_actor"),
               preview: entry.content ?? "",
             });

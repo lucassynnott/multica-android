@@ -49,7 +49,9 @@
   "list": {
     "empty": "沒有符合篩選條件的任務",
     "count_other": "{{count}} 個任務",
-    "search_placeholder": "搜尋任務和專案"
+    "search_placeholder": "搜尋任務和專案",
+    "no_results": "沒有與「{{query}}」相符的結果",
+    "search_failed": "搜尋失敗。請檢查網路連線後再試一次。"
   },
   "detail": {
     "properties": "屬性",
@@ -65,14 +67,21 @@
     "open_on_web": "在網頁開啟",
     "delete_comment": "刪除評論",
     "edit_comment": "編輯評論",
-    "no_runs": "暫無執行"
+    "no_runs": "暫無執行",
+    "no_description": "暫無描述。",
+    "empty_priority": "設定優先順序",
+    "empty_assignee": "分配",
+    "empty_label": "新增標籤",
+    "empty_project": "新增到專案",
+    "empty_due_date": "設定日期"
   },
   "new": {
     "title": "新建任務",
     "title_placeholder": "任務標題",
     "create": "建立任務",
     "creating": "建立中...",
-    "description_placeholder": "描述...（輸入 @ 提及）"
+    "description_placeholder": "描述...（輸入 @ 提及）",
+    "status_preset_hint": "因為你是從「{{status}}」欄新增的，所以將建立在該狀態下。"
   },
   "edit": {
     "title": "編輯任務",
@@ -120,7 +129,8 @@
     "created": "你還沒有建立任務。",
     "agents": "沒有分配給 AI 代理或小隊的任務。",
     "all": "該工作區還沒有任務。",
-    "members": "沒有分配給成員的任務。"
+    "members": "沒有分配給成員的任務。",
+    "select_issue": "選擇一個任務"
   },
   "menu": {
     "pin": "固定",
@@ -129,7 +139,8 @@
     "copy_link": "複製連結",
     "open_web": "在網頁開啟",
     "delete_issue": "刪除任務",
-    "issue_actions": "任務操作"
+    "issue_actions": "任務操作",
+    "open_full_screen": "全螢幕開啟"
   },
   "delete": {
     "title": "刪除任務？",
@@ -154,6 +165,7 @@
   "form": {
     "discard_title": "放棄修改？",
     "discard_message_issue": "你對這個任務的修改將會丟失。",
+    "discard_message_new_issue": "你的草稿將會丟失。",
     "keep_editing": "繼續編輯",
     "save_failed": "儲存失敗"
   },
@@ -198,7 +210,10 @@
     "more_reactions": "更多表情...",
     "fallback_actor": "評論",
     "composer_placeholder": "新增評論...",
-    "composer_pill": "新增評論，輸入 @ 提及..."
+    "composer_pill": "新增評論，輸入 @ 提及...",
+    "deleted": "該評論已刪除",
+    "edited": "已編輯",
+    "add_reaction": "新增回應"
   },
   "suggestions": {
     "everyone": "所有人",
@@ -272,6 +287,14 @@
   },
   "header_filter": "篩選",
   "new_badge": "新",
+  "new_count": "{{count}} 則新動態",
+  "time_short": {
+    "now": "剛剛",
+    "minutes": "{{count}}分",
+    "hours": "{{count}}時",
+    "days": "{{count}}天",
+    "weeks": "{{count}}週"
+  },
   "jump_a11y_other": "跳到 {{count}} 條新訊息",
   "a11y": {
     "agent_working": "AI 代理處理中 — 開啟執行",
@@ -295,13 +318,17 @@
     "cancel": "取消",
     "filter": "篩選",
     "new_issue": "新增任務",
-    "count": "{{count}} 個任務",
+    "count_other": "{{count}} 個任務",
+    "add_to_column": "在{{status}}中新增任務",
     "unassigned": "未指派",
     "empty_column": "尚無任務",
     "move_top": "移到頂部",
     "workflow_blocked_title": "無法移動",
     "workflow_blocked_body": "{{status}} 不在 {{workflow}} 工作流中。允許的狀態：{{allowed}}。",
     "move_failed_title": "移動失敗",
-    "move_failed_body": "{{error}}"
+    "move_failed_body": "{{error}}",
+    "view": "檢視",
+    "view_list": "列表檢視",
+    "view_kanban": "看板檢視"
   }
 }

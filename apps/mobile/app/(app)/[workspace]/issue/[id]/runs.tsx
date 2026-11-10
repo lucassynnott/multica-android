@@ -17,8 +17,8 @@ import { ScrollView, View } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import type { AgentTask } from "@multica/core/types";
-import { Text } from "@/components/ui/text";
 import { RunRow } from "@/components/issue/run-row";
+import { PickerSectionLabel, PickerTitle } from "@/components/ui/picker-row";
 import {
   issueActiveTasksOptions,
   issueTasksOptions,
@@ -70,13 +70,9 @@ export default function IssueRunsRoute() {
 
   return (
     <View className="flex-1">
-      <View className="px-4 pb-2 pt-4">
-        <Text className="text-[17px] font-semibold tracking-tight text-foreground">
-          {t("runs.title")}
-        </Text>
-      </View>
+      <PickerTitle>{t("runs.title")}</PickerTitle>
       <ScrollView showsVerticalScrollIndicator={false}>
-        <View className="gap-4 px-4 pt-2 pb-6">
+        <View className="pb-6">
           {active.length > 0 ? (
             <Section title={t("runs.active")}>
               {active.map((task) => (
@@ -105,10 +101,8 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <View className="gap-2">
-      <Text className="text-[11px] font-medium text-muted-foreground">
-        {title}
-      </Text>
+    <View>
+      <PickerSectionLabel>{title}</PickerSectionLabel>
       <View>{children}</View>
     </View>
   );

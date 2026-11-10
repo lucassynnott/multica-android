@@ -34,7 +34,7 @@ export function RunTranscript({
   return (
     <FlatList
       className="flex-1"
-      contentContainerClassName="px-4 py-4"
+      contentContainerClassName="px-5 py-4"
       data={timeline}
       keyExtractor={(item, index) => `${item.task_id}-${item.seq}-${index}`}
       renderItem={({ item }) => <TranscriptEntry item={item} />}
@@ -43,17 +43,17 @@ export function RunTranscript({
         <View className="mb-4 gap-4">
           {header}
           {diagnostics ? (
-            <View className={`gap-2 rounded-lg border px-3 py-3 ${
-              task.status === "failed" ? "border-destructive/30 bg-destructive/5" : "border-border bg-card"
+            <View className={`gap-2 rounded-lg border bg-card px-3.5 py-3 ${
+              task.status === "failed" ? "border-destructive/40" : "border-border"
             }`}>
               {diagnostics.reasonKey ? (
-                <Text className="text-sm font-medium text-destructive">
+                <Text className="text-[15px] font-semibold leading-[21px] text-destructive">
                   {t(`chat:${diagnostics.reasonKey}`)}
                 </Text>
               ) : null}
               {diagnostics.error ? (
                 <View className="gap-1">
-                  <Text className="text-xs font-medium text-muted-foreground">
+                  <Text className="text-[13px] font-semibold text-muted-foreground">
                     {t("runs.transcript.diagnostics")}
                   </Text>
                   <Text selectable className="font-mono text-xs text-foreground">
@@ -67,8 +67,8 @@ export function RunTranscript({
       }
       ListEmptyComponent={
         diagnostics ? null : (
-          <View className="items-center rounded-lg border border-dashed border-border px-4 py-8">
-            <Text className="text-sm text-muted-foreground">
+          <View className="items-center px-4 py-8">
+            <Text className="text-[13px] text-muted-foreground">
               {t("runs.transcript.empty")}
             </Text>
           </View>
@@ -89,7 +89,7 @@ function TranscriptEntry({ item: entry }: { item: RunTranscriptEntry }) {
     case "thinking":
       return (
         <EntryCard icon="bulb-outline" labelKey="thinking" collapsible>
-          <Text selectable className="text-sm italic text-muted-foreground">
+          <Text selectable className="text-[15px] leading-[21px] text-muted-foreground">
             {item.content || "—"}
           </Text>
         </EntryCard>
@@ -97,7 +97,7 @@ function TranscriptEntry({ item: entry }: { item: RunTranscriptEntry }) {
     case "error":
       return (
         <EntryCard icon="alert-circle-outline" labelKey="error" destructive>
-          <Text selectable className="text-sm text-destructive">
+          <Text selectable className="text-[15px] leading-[21px] text-destructive">
             {item.content || "—"}
           </Text>
         </EntryCard>
@@ -109,7 +109,7 @@ function TranscriptEntry({ item: entry }: { item: RunTranscriptEntry }) {
           {item.content ? (
             <Markdown content={item.content} />
           ) : (
-            <Text className="text-sm text-muted-foreground">—</Text>
+            <Text className="text-[15px] text-muted-foreground">—</Text>
           )}
         </EntryCard>
       );
@@ -134,8 +134,8 @@ function ToolEntry({ call, result }: { call?: TaskMessagePayload; result?: TaskM
     >
       <View className="gap-2">
         {call ? (
-          <View className="rounded-md bg-muted px-3 py-2">
-            <Text selectable className="font-mono text-xs text-muted-foreground">
+          <View className="rounded-lg bg-secondary px-3 py-2">
+            <Text selectable className="font-mono text-xs text-foreground">
               {input}
             </Text>
           </View>
@@ -157,11 +157,11 @@ function ToolResultContent({ item }: { item: TaskMessagePayload }) {
 
   return (
     <View className="gap-2">
-      <Text className="text-xs font-medium text-muted-foreground">
+      <Text className="text-[13px] font-semibold text-muted-foreground">
         {t("runs.transcript.tool_output")}
       </Text>
-      <View className="rounded-md bg-muted px-3 py-2">
-        <Text selectable className="font-mono text-xs text-muted-foreground">
+      <View className="rounded-lg bg-secondary px-3 py-2">
+        <Text selectable className="font-mono text-xs text-foreground">
           {shown || "—"}
         </Text>
       </View>
@@ -169,15 +169,15 @@ function ToolResultContent({ item }: { item: TaskMessagePayload }) {
         <Pressable
           accessibilityRole="button"
           onPress={() => setShowFullOutput(!showFullOutput)}
-          className="mt-2 py-1"
+          className="min-h-11 justify-center"
         >
-          <Text className="text-sm text-brand">
+          <Text className="text-[13px] font-semibold text-primary">
             {t(showFullOutput ? "runs.transcript.show_less" : "runs.transcript.show_full_output")}
           </Text>
         </Pressable>
       ) : null}
       {item.output_truncated === true ? (
-        <Text className="mt-2 text-xs text-muted-foreground">
+        <Text className="text-[13px] text-muted-foreground">
           {t("runs.transcript.truncated")}
         </Text>
       ) : null}
@@ -204,13 +204,13 @@ function EntryCard({
   const [open, setOpen] = useState(false);
   const { colorScheme } = useColorScheme();
   const theme = THEME[colorScheme === "dark" ? "dark" : "light"];
-  const className = `rounded-lg border px-3 py-3 ${
-    destructive ? "border-destructive/30 bg-destructive/5" : "border-border bg-card"
-  }`;
+  const className = `rounded-lg border bg-card px-3.5 ${
+    destructive ? "border-destructive/40" : "border-border"
+  } ${collapsible ? "" : "py-3"}`;
   const heading = (
     <>
       <Ionicons name={icon} size={14} color={destructive ? theme.destructive : theme.mutedForeground} />
-      <Text numberOfLines={2} className={`flex-1 text-xs font-medium ${destructive ? "text-destructive" : "text-muted-foreground"}`}>
+      <Text numberOfLines={2} className={`flex-1 font-mono text-xs ${destructive ? "text-destructive" : "text-muted-foreground"}`}>
         {t(`runs.transcript.${labelKey}`)}{detail ? ` · ${detail}` : ""}
       </Text>
     </>
@@ -219,7 +219,7 @@ function EntryCard({
   if (collapsible) {
     return (
       <Collapsible open={open} onOpenChange={setOpen} className={className}>
-        <CollapsibleTrigger className="flex-row items-center gap-2">
+        <CollapsibleTrigger className="min-h-11 flex-row items-center gap-2">
           {heading}
           <Ionicons
             name={open ? "chevron-down" : "chevron-forward"}
@@ -227,7 +227,7 @@ function EntryCard({
             color={theme.mutedForeground}
           />
         </CollapsibleTrigger>
-        <CollapsibleContent className="pt-2">{children}</CollapsibleContent>
+        <CollapsibleContent className="pb-3">{children}</CollapsibleContent>
       </Collapsible>
     );
   }

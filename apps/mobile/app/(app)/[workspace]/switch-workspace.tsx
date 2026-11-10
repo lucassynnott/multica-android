@@ -1,15 +1,15 @@
 /**
  * Workspace switcher — presented as a formSheet by the parent Stack.
  *
- * Reached from the More popover's WorkspaceCard (collapsed single-row entry).
+ * Reached from the Workspace row on the More tab.
  * Lists every workspace the user belongs to, current one disabled with a
  * checkmark. Tapping a non-current row triggers an iOS-native `Alert.alert`
  * confirm — only after the user confirms do we dismiss the sheet and
  * `router.replace` to the target slug.
  *
  * Why a confirm step:
- *   The previous flow ("popover → tap row → instant switch") had no friction
- *   against fat-finger taps in the cramped popover, and the user lost their
+ *   An instant switch on tap had no friction against a fat-finger tap, and
+ *   the user lost their
  *   entire navigation context (tabs, scroll position) with one accidental
  *   tap. iOS Alert is the platform-correct gate (mobile/CLAUDE.md Principle
  *   3 — iOS native > RNR > discuss).
@@ -25,12 +25,11 @@ import {
   ScrollView,
   View,
 } from "react-native";
-import { Image as ExpoImage } from "expo-image";
 import { router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import type { Workspace } from "@multica/core/types";
 import { Text } from "@/components/ui/text";
-import { Separator } from "@/components/ui/separator";
+import { PlatformIcon } from "@/components/ui/platform-icon";
 import { WorkspaceAvatar } from "@/components/workspace/workspace-avatar";
 import { workspaceListOptions } from "@/data/queries/workspaces";
 import { useWorkspaceStore } from "@/data/workspace-store";
@@ -66,8 +65,8 @@ export default function SwitchWorkspaceRoute() {
 
   return (
     <View className="flex-1 bg-background">
-      <View className="px-4 pt-4 pb-3">
-        <Text className="text-base font-semibold text-foreground">
+      <View className="px-5 pt-4 pb-2">
+        <Text className="text-xl font-semibold text-foreground">
           {t("switch.title")}
         </Text>
       </View>
@@ -77,20 +76,14 @@ export default function SwitchWorkspaceRoute() {
         </View>
       ) : (
         <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-          {(data ?? []).map((ws, idx) => (
-            <View key={ws.id}>
-              <WorkspaceRow
-                workspace={ws}
-                active={ws.slug === activeSlug}
-                onPress={() => onSelect(ws)}
-                iconTint={theme.mutedForeground}
-              />
-              {idx !== (data?.length ?? 0) - 1 ? (
-                <View className="px-4">
-                  <Separator />
-                </View>
-              ) : null}
-            </View>
+          {(data ?? []).map((ws) => (
+            <WorkspaceRow
+              key={ws.id}
+              workspace={ws}
+              active={ws.slug === activeSlug}
+              onPress={() => onSelect(ws)}
+              iconTint={theme.primary}
+            />
           ))}
         </ScrollView>
       )}
@@ -120,8 +113,8 @@ function WorkspaceRow({
           : t("switch.switch_a11y", { name: workspace.name })
       }
       className={cn(
-        "flex-row items-center gap-3 px-4 py-3 active:bg-secondary",
-        active && "opacity-100",
+        "min-h-[52px] flex-row items-center gap-3 border-b border-border px-5 py-2.5 active:bg-secondary",
+        active && "bg-secondary",
       )}
     >
       <WorkspaceAvatar
@@ -131,7 +124,7 @@ function WorkspaceRow({
       />
       <Text
         className={cn(
-          "flex-1 text-sm text-foreground",
+          "flex-1 text-[15px] leading-[21px] text-foreground",
           active && "font-semibold",
         )}
         numberOfLines={1}
@@ -139,11 +132,7 @@ function WorkspaceRow({
         {workspace.name}
       </Text>
       {active ? (
-        <ExpoImage
-          source="sf:checkmark"
-          tintColor={iconTint}
-          style={{ width: 16, height: 16 }}
-        />
+        <PlatformIcon sf="checkmark" ion="checkmark" color={iconTint} size={18} />
       ) : null}
     </Pressable>
   );

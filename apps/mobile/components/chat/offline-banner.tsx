@@ -4,19 +4,25 @@
  * `packages/views/chat/components/offline-banner.tsx`.
  *
  * Two states render copy:
- *   - `unstable` (runtime offline < 5 min) → amber, "may reconnect"
- *   - `offline`  (runtime offline ≥ 5 min) → muted, "won't run until back"
+ *   - `unstable` (runtime offline < 5 min) → "may reconnect"
+ *   - `offline`  (runtime offline ≥ 5 min) → "won't run until back"
+ *
+ * Both are a hairline-bordered row, not a filled box: the icon tells the two
+ * apart and the text stays neutral.
  *
  * Loading silence: `undefined` and the implicit "online" case render nothing.
  * The chat composer never sees a speculative offline flash during the cold
  * fetch window — copy only appears when there's a real-world implication for
  * the message the user is about to send.
  */
+import type { ComponentProps } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { View } from "react-native";
 import type { AgentAvailability } from "@multica/core/agents";
 import { Text } from "@/components/ui/text";
 import { useT } from "@/lib/i18n";
+import { useColorScheme } from "@/lib/use-color-scheme";
+import { THEME } from "@/lib/theme";
 
 interface Props {
   /** Display name for the copy. */
@@ -36,26 +42,42 @@ export function OfflineBanner({ agentName, availability }: Props) {
 
   if (availability === "unstable") {
     return (
-      <View className="mx-3 mb-1.5 flex-row items-center gap-1.5 rounded-md border border-warning/30 bg-warning/10 px-2.5 py-1.5">
-        <Ionicons name="alert-circle-outline" size={14} color="#a16207" />
-        <Text
-          className="flex-1 text-xs text-warning"
-          numberOfLines={1}
-        >
-          {t("banners.offline_unstable", { name })}
-        </Text>
-      </View>
+      <ChatNoticeRow
+        icon="alert-circle-outline"
+        text={t("banners.offline_unstable", { name })}
+      />
     );
   }
 
   return (
-    <View className="mx-3 mb-1.5 flex-row items-center gap-1.5 rounded-md border border-border bg-muted/40 px-2.5 py-1.5">
-      <Ionicons name="cloud-offline-outline" size={14} color="#71717a" />
-      <Text
-        className="flex-1 text-xs text-muted-foreground"
-        numberOfLines={1}
-      >
-        {t("banners.offline", { name })}
+    <ChatNoticeRow
+      icon="cloud-offline-outline"
+      text={t("banners.offline", { name })}
+    />
+  );
+}
+
+/** One hairline-topped notice row above the composer. */
+export function ChatNoticeRow({
+  icon,
+  text,
+}: {
+  icon: ComponentProps<typeof Ionicons>["name"];
+  text: string;
+}) {
+  const { colorScheme } = useColorScheme();
+  return (
+    <View
+      className="min-h-11 flex-row items-center gap-2.5 border-t border-border px-5 py-2.5"
+      accessibilityRole="alert"
+    >
+      <Ionicons
+        name={icon}
+        size={16}
+        color={THEME[colorScheme].mutedForeground}
+      />
+      <Text className="flex-1 text-[13px] leading-[18px] text-muted-foreground">
+        {text}
       </Text>
     </View>
   );

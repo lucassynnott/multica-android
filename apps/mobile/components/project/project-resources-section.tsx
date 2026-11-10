@@ -3,10 +3,8 @@
  * (today: GitHub repos). Tap a row to open the URL in the system browser.
  * Long-press for delete (Pressable's onLongPress).
  *
- * One card under an 11 px sentence-case label; the "Add" action rides the
- * label row instead of a header inside the card, so the card has no second
- * border to double. Separators live BETWEEN rows (never above the first), same
- * reason.
+ * A DESIGN.md "Group header" (44dp, top hairline, name 13/600, mono count)
+ * with the "Add" action as its trailing control, then plain rows.
  *
  * Schema-tolerant by design — `resource_ref` is typed `unknown` in the
  * mobile schema (server may extend the shape per resource_type). We narrow
@@ -50,48 +48,45 @@ export function ProjectResourcesSection({ projectId, onAdd }: Props) {
   };
 
   return (
-    <View className="gap-2">
-      <View className="flex-row items-center justify-between px-1">
-        <Text className="text-[11px] font-medium text-muted-foreground">
+    <View>
+      <View className="h-11 flex-row items-center gap-2.5 border-t border-border pl-5 pr-2">
+        <Text className="text-[13px] font-semibold text-foreground">
           {t("resources.title")}
         </Text>
+        {resources && resources.length > 0 ? (
+          <Text className="font-mono text-xs text-muted-foreground">
+            {resources.length}
+          </Text>
+        ) : null}
+        <View className="flex-1" />
         <Pressable
           onPress={onAdd}
-          hitSlop={8}
           accessibilityRole="button"
-          className="h-6 justify-center rounded-md active:opacity-70"
+          className="h-11 min-w-11 items-center justify-center rounded-lg px-3 active:bg-secondary"
         >
-          <Text className="text-[12px] font-medium text-brand">
+          <Text className="text-[13px] font-semibold text-primary">
             {t("resources.add")}
           </Text>
         </Pressable>
       </View>
 
-      <View className="overflow-hidden rounded-xl border border-border bg-card">
-        {isLoading ? (
-          <View className="items-center py-6">
-            <ActivityIndicator size="small" />
-          </View>
-        ) : !resources || resources.length === 0 ? (
-          <View className="px-4 py-3">
-            <Text className="text-[13px] text-muted-foreground">
-              {t("resources.empty")}
-            </Text>
-          </View>
-        ) : (
-          resources.map((resource, index) => (
-            <View key={resource.id}>
-              {index > 0 ? (
-                <View className="ml-4 h-px bg-border" />
-              ) : null}
-              <ResourceRow
-                resource={resource}
-                onPress={() => onOpen(resource)}
-              />
-            </View>
-          ))
-        )}
-      </View>
+      {isLoading ? (
+        <View className="items-center py-6">
+          <ActivityIndicator size="small" />
+        </View>
+      ) : !resources || resources.length === 0 ? (
+        <Text className="px-5 pb-3 text-[13px] text-muted-foreground">
+          {t("resources.empty")}
+        </Text>
+      ) : (
+        resources.map((resource) => (
+          <ResourceRow
+            key={resource.id}
+            resource={resource}
+            onPress={() => onOpen(resource)}
+          />
+        ))
+      )}
     </View>
   );
 }
@@ -128,23 +123,31 @@ function ResourceRow({
       disabled={remove.isPending}
       accessibilityState={{ disabled: remove.isPending, busy: remove.isPending }}
       delayLongPress={400}
-      className="flex-row items-center gap-3 px-4 py-3 active:bg-secondary"
+      className="min-h-11 flex-row items-start gap-3 px-5 py-2.5 active:bg-secondary"
     >
-      {remove.isPending ? (
-        <ActivityIndicator size="small" />
-      ) : (
-        <Ionicons
-          name={iconFor(resource.resource_type)}
-          size={16}
-          color={THEME[colorScheme].mutedForeground}
-        />
-      )}
-      <View className="flex-1 gap-0.5">
-        <Text className="text-[13px] text-foreground" numberOfLines={1}>
+      <View className="h-[21px] w-5 items-center justify-center">
+        {remove.isPending ? (
+          <ActivityIndicator size="small" />
+        ) : (
+          <Ionicons
+            name={iconFor(resource.resource_type)}
+            size={18}
+            color={THEME[colorScheme].mutedForeground}
+          />
+        )}
+      </View>
+      <View className="min-w-0 flex-1 gap-1">
+        <Text
+          className="text-[15px] leading-[21px] text-foreground"
+          numberOfLines={1}
+        >
           {resource.label ?? describeResource(resource)}
         </Text>
         {resource.label ? (
-          <Text className="text-[12px] text-muted-foreground" numberOfLines={1}>
+          <Text
+            className="font-mono text-xs text-muted-foreground"
+            numberOfLines={1}
+          >
             {describeResource(resource)}
           </Text>
         ) : null}
@@ -155,11 +158,11 @@ function ResourceRow({
           <View className="flex-row items-center gap-1">
             <Ionicons
               name="git-branch-outline"
-              size={11}
+              size={12}
               color={THEME[colorScheme].mutedForeground}
             />
             <Text
-              className="text-[12px] text-muted-foreground"
+              className="font-mono text-xs text-muted-foreground"
               numberOfLines={1}
             >
               {checkoutRefOf(resource)}

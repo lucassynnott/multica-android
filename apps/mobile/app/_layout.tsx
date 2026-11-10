@@ -18,6 +18,8 @@ import { maybeRenewSession } from "@/data/session-renewal";
 import { queryClient } from "@/data/query-client";
 import { useAuthStore } from "@/data/auth-store";
 import { useWorkspaceStore } from "@/data/workspace-store";
+import { useTextureStore } from "@/data/stores/texture-store";
+import { useBoardViewStore } from "@/data/stores/board-view-store";
 import { SessionActivityBoundary } from "@/components/auth/session-activity-boundary";
 import { LightboxProvider, prewarmHighlighter } from "@/lib/markdown";
 import { NAV_THEME } from "@/lib/theme";
@@ -62,6 +64,8 @@ function AuthInitializer({ children }: { children: React.ReactNode }) {
     // is restored and the identity probe has settled, so it never races the
     // first getMe(); a no-op when there is no session to extend.
     void initialize().then(() => maybeRenewSession());
+    void useTextureStore.getState().hydrate();
+    void useBoardViewStore.getState().hydrate();
   }, [initialize, qc]);
 
   // Foreground transitions are one of the two "someone is using this" signals;

@@ -52,7 +52,10 @@ systemd-run --user --scope -p MemoryMax=16G --unit=multica-build \
 | --- | --- | --- |
 | `ActionSheet` (cross-platform) + `ActionSheetHost` | `lib/action-sheet.ts`, `components/ui/action-sheet-host.tsx`, mounted in `app/_layout.tsx` | `ActionSheetIOS` is undefined on Android: every "…" menu, inbox menu, comment long-press and chat long-press crashed. The shim keeps the exact `showActionSheetWithOptions(options, cb)` signature, delegates to the native sheet on iOS, and draws a bottom sheet on Android. |
 | `PlatformIcon` | `components/ui/platform-icon.tsx` | Tab bar and More menu used `expo-image` with `sf:` symbols, which render nothing on Android. Android gets the equivalent Ionicons glyph. |
-| Date picker `display` | `components/issue/pickers/due-date-picker-body.tsx` | `display="inline"` is iOS-only; Android renders an empty sheet. Android uses the default dialog. |
+| Picker search field | `lib/use-native-search-bar.ts`, `components/ui/picker-search-field.tsx` | react-native-screens builds no toolbar for a formSheet on Android, so `headerSearchBarOptions` (and the sheet's title) never render. Search pickers (assignee, label, project, lead, mention) render an in-body field on Android from the same hook state. |
+| Discard guard | `lib/use-discard-guard.ts` | The "Discard changes?" alert lived only on the header Cancel button; hardware back and the back gesture dropped drafts silently. New issue, edit issue, new project and edit project now confirm on `beforeRemove`. Screens leave through the hook's `leave()` so a save does not prompt. |
+| Modal back arrow | `app/(app)/[workspace]/_layout.tsx` | `presentation: "modal"` is a plain push on Android and drew a back arrow beside the custom close button. `headerBackVisible: false` on those screens. |
+| Date picker | `components/issue/pickers/due-date-picker-body.tsx` | `display="inline"` is iOS-only, and Android's picker is a system dialog that leaves nothing in the sheet once closed. On Android the sheet shows the draft day as a row and opens the dialog imperatively (`DateTimePickerAndroid.open`), once on arrival and again on tap. |
 | Keyboard avoidance | 8 screens (`login`, `verify`, `new-issue`, `search`, `chat`, issue/project edit…) | `behavior` was `undefined` on Android, relying on `adjustResize`. With edge-to-edge (Android 15+) the window no longer resizes, so the keyboard covered inputs. Android now uses `behavior="height"`. |
 | Camera permission | `app.config.ts`, `AndroidManifest.xml` | The manifest stripped `CAMERA` while the profile screen offers "Take photo". Enabled, requested at runtime. |
 
@@ -69,13 +72,46 @@ from generic Material numbers:
 | Z Fold 8 Ultra main | 2504×2256 @422 | 949×855 | expanded |
 
 - **compact** — bottom tab bar, one board column plus the next column's edge.
-- **medium** — navigation rail replaces the bottom bar (`tabBarPosition:
-  "left"`), so the taller 4:3 canvas keeps its vertical space. The board shows
-  two columns plus the next column's edge beside the rail. `tabBarVariant` is
-  deliberately *not* toggled with the breakpoint: flipping uikit ↔ material
-  swaps the bar implementation and react-navigation rebuilds the tab tree.
-- **expanded** — rail plus room for three or four columns; reserved for the
-  split-pane work below.
+- **medium** — navigation rail replaces the bottom bar, so the taller 4:3
+  canvas keeps its vertical space. The board shows two columns plus the next
+  column's edge beside the rail.
+
+  Both shapes are `components/nav/app-tab-bar.tsx`: one component that only
+  changes flex direction, so a fold is a relayout and never a tree rebuild.
+  Five destinations (Inbox, Mine, Board, Chat, More), each an icon over a
+  label; the active one is foreground-coloured and semibold. The rail carries
+  a "New issue" tile at its top. More is a real screen, not a popover.
+- **expanded** — rail plus room for three or four columns, and a slightly
+  wider list column in the split below.
+
+### List and detail split
+
+From 672dp up (`isSplitPane` in `lib/responsive.ts`: the rail, a 300dp list
+and at least 300dp of detail, so every unfolded Fold posture qualifies) a tap
+on an issue opens it in a pane to the right of the list instead of pushing
+`issue/[id]`. It applies to the Board tab in its list view, My Issues and
+Inbox rows that target an issue. The kanban, search, project detail and every
+compact window keep pushing the full-screen route.
+
+- `components/ui/split-pane.tsx` lays out the list at 300dp (320 on expanded)
+  with a right hairline and the detail in the rest. Both children are always
+  mounted in the same place and the detail is only hidden when the window is
+  not split, so a fold is a relayout: nothing is navigated, the list keeps its
+  scroll offset, and unfolding shows the same issue with its draft intact.
+- `components/issue/issue-detail-view.tsx` is the whole issue detail. The
+  route `issue/[id]` renders it with `variant="screen"` (native header); the
+  pane renders `variant="pane"` on `bg-card` with its own header (identifier,
+  "open full screen", the "…" menu). Pickers and the edit screen are still
+  routes pushed over the tabs; they take the issue id from their own URL.
+- The open issue per surface (board / mine / inbox) lives in
+  `data/stores/issue-pane-store.ts`, not in navigation state, and is reset on
+  workspace change. A deleted issue clears its slot instead of popping a
+  route. The selected row is `bg-secondary`, and rows in the narrow column
+  stack (id, meta and avatar on one line, title below).
+- Only the selected tab mounts its pane (`issue-detail-pane.tsx`): the
+  composer's mention and reply stores are singletons, so background tabs must
+  not keep live composers. Switching tabs therefore drops an unsent comment
+  draft in the pane; opening a picker does not.
 
 Orientation is unlocked (`orientation: "default"`) and
 `plugins/with-foldable-manifest.js` writes `resizeableActivity="true"`,
@@ -94,7 +130,26 @@ activity is re-laid out in place: verify by selecting Board, applying
 `wm size 1248x1972 && wm density 428`, and checking the header still reads
 Board with the same `pidof`.
 
+## Visual system
+
+See `DESIGN.md`. Two Android-specific points:
+
+- Schibsted Grotesk and JetBrains Mono are registered as native font families
+  by the `expo-font` config plugin (`app.config.ts`), with one file per
+  weight. That is what makes `fontWeight` select a real cut on Android; a
+  font loaded at runtime by name gets a synthesised bold instead. Adding a
+  weight means adding the file and a prebuild.
+- The animated background (`components/ui/tide-texture.tsx`) updates a text
+  node four times a second, so `uiautomator dump` reports "could not get idle
+  state" on any screen showing it. Automation should use screenshots, or turn
+  the texture off in More first.
+
 ## Board (kanban)
+
+The Board has two views, switched by the picker in its header and remembered
+in `data/stores/board-view-store.ts`: a grouped list (`board-list.tsx`) and
+the horizontal kanban (`board-canvas.tsx`). Both use the same move sheet.
+
 
 `app/(app)/[workspace]/(tabs)/board.tsx` with `components/board/*` and
 `lib/board.ts`. Columns are the workspace's own statuses (custom statuses
@@ -145,7 +200,7 @@ never in a committed env file.
 ```bash
 pnpm --filter @multica/mobile typecheck   # tsc --noEmit
 pnpm --filter @multica/mobile lint        # expo lint, 0 problems
-pnpm --filter @multica/mobile test        # vitest, 307 tests
+pnpm --filter @multica/mobile test        # vitest, 318 tests
 ```
 
 `app.config.test.ts` asserts the resolved `plugins` array, so it fails
@@ -172,12 +227,12 @@ workflow_step_moved`; that is left to the generic message for now.
 one `Modal` bottom sheet mounted in the root layout. Two behaviours cost real
 debugging time on the Fold 8 canvas:
 
-- **Rows near the sheet's bottom edge paint but do not take taps.** The last
-  row of a long status list and even a four-row sheet's `Cancel` were visible
-  in `uiautomator` bounds and on screen, and taps there did nothing. Whatever
-  the cause (clip versus dialog window), do not rely on the bottom strip: the
-  sheet carries a close `✕` in its header, and the backdrop plus the system
-  back button also dismiss it. Verify any change to this component by tapping,
+- **The header must be measured, not budgeted.** The panel has an explicit
+  height (see below), and the header was once assumed to be 64dp. A board
+  card's sheet passes the issue title as the message; when it wrapped, the
+  header outgrew its budget and the panel clipped the last rows, which then
+  painted partly and took no taps. The header's height now comes from
+  `onLayout`. Verify any change to this component by tapping the last row,
   not only by screenshotting — a rendered row is not a working button.
 - **A long option list must be an explicit height.** `maxHeight` on a
   `ScrollView`, and `flex: 1` inside a `maxHeight` panel, both let the content
@@ -186,10 +241,33 @@ debugging time on the Fold 8 canvas:
   `onContentSizeChange`, clamped to a budget derived from the measured modal
   box (not `useWindowDimensions`, which includes the system bars).
 
+## Dev server
+
+`react-native-css-interop` 0.2.4 emits Metro's pre-0.83 file-change event, and
+Metro 0.84 throws on it (`Cannot read properties of undefined (reading
+'addedFiles')`), killing the dev server the first time NativeWind regenerates
+styles. `patches/react-native-css-interop@0.2.4.patch` emits the current event
+shape. Drop the patch once NativeWind ships the fix.
+
 ## Known gaps
 
-- Two-pane master-detail (list + detail side by side on `expanded`) is not
-  built; the rail plus wider lists is what ships today.
+- Text laid out right after a live fold can lose its last character
+  ("Pinne" for "Pinned" in the More menu). Reproduced on the emulator by
+  changing `wm density` 428 → 403 without restarting; a fresh launch at
+  either density is correct. Auto-width single-line text appears to be
+  measured with the previous density. Root cause not found — it is the cost
+  of keeping the activity alive across a density change (see `density` in
+  `configChanges` above) and needs checking on a physical Fold.
+- Chat still uses React Native's `KeyboardAvoidingView` with
+  `behavior="height"`, which captures its frame once; after a fold the
+  composer offset can be wrong until the tab remounts. Not changed here
+  because the test backend had no agent to chat with.
+
+- The list and detail split has only been type-checked, not run on a
+  device. Inside the pane the comment bubbles, code blocks and the composer
+  field are `bg-card` on a `bg-card` surface and rely on their hairline
+  border; the mockup gives them a third, lighter step. Android back does not
+  close the pane (there is no route to pop).
 - `ios/` remains the reference platform: `sheetGrabberVisible`,
   `headerBackTitle` and iOS-only `Alert` styling are inert on Android.
 - Release signing uses the generated debug keystore. A store build needs its

@@ -8,20 +8,22 @@
  *   - /[workspace]/issues-filter?scope=all  →  useIssuesViewStore
  *
  * Self-contained: reads/writes the store directly, no callback passing.
+ *
+ * Multi-select in the shared picker row language: every option is a row, an
+ * active filter carries the accent check.
  */
-import type { ReactNode } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import type { IssuePriority, IssueStatus } from "@multica/core/types";
 import { Text } from "@/components/ui/text";
 import { StatusIcon } from "@/components/ui/status-icon";
 import { PriorityIcon } from "@/components/ui/priority-icon";
+import { PickerRow, PickerSectionLabel } from "@/components/ui/picker-row";
 import { useIssuesViewStore } from "@/data/stores/issues-view-store";
 import { useMyIssuesViewStore } from "@/data/stores/my-issues-view-store";
 import { statusOptions } from "@/lib/issue-status";
 import { useIssueStatuses } from "@/lib/use-issue-statuses";
 import { useT } from "@/lib/i18n";
-import { cn } from "@/lib/utils";
 
 // Mirrors PRIORITY_ORDER in packages/core/issues/config/priority.ts.
 const PRIORITY_ORDER: IssuePriority[] = [
@@ -80,66 +82,59 @@ export default function IssuesFilterRoute() {
 
   return (
     <View className="flex-1">
-      <View className="flex-row items-center justify-between px-4 pb-2 pt-4">
-        <Text className="text-base font-semibold text-foreground">
+      <View className="flex-row items-center justify-between pb-2 pl-5 pr-3 pt-3">
+        <Text className="text-xl font-semibold text-foreground">
           {t("filters.title")}
         </Text>
         {hasActive ? (
           <Pressable
             onPress={onClearFilters}
-            hitSlop={8}
-            className="px-2 py-1 active:opacity-60"
+            accessibilityRole="button"
+            className="h-11 justify-center rounded-lg px-3 active:bg-secondary"
           >
-            <Text className="text-sm text-primary font-medium">
+            <Text className="text-[15px] text-primary">
               {t("filters.clear")}
             </Text>
           </Pressable>
-        ) : null}
+        ) : (
+          <View className="h-11" />
+        )}
       </View>
       <ScrollView
         className="flex-1"
         contentContainerClassName="pb-6"
         showsVerticalScrollIndicator={false}
       >
-        <SectionLabel>{t("filters.status")}</SectionLabel>
-        <View className="flex-row flex-wrap gap-2 px-4">
-          {statusChoices.map((option) => {
-            const checked = statusFilters.includes(option.key);
-            return (
-              <FilterChip
-                key={option.key}
-                active={checked}
-                onPress={() => onToggleStatus(option.key)}
-                label={catalog.labelOf(option.key)}
-                icon={
-                  <StatusIcon
-                    status={option.key}
-                    category={option.category}
-                    icon={option.icon}
-                    color={option.color}
-                    size={12}
-                  />
-                }
+        <PickerSectionLabel>{t("filters.status")}</PickerSectionLabel>
+        {statusChoices.map((option) => (
+          <PickerRow
+            key={option.key}
+            selected={statusFilters.includes(option.key)}
+            onPress={() => onToggleStatus(option.key)}
+            label={catalog.labelOf(option.key)}
+            leading={
+              <StatusIcon
+                status={option.key}
+                category={option.category}
+                icon={option.icon}
+                color={option.color}
+                size={18}
               />
-            );
-          })}
-        </View>
+            }
+          />
+        ))}
 
-        <SectionLabel>{t("filters.priority")}</SectionLabel>
-        <View className="flex-row flex-wrap gap-2 px-4">
-          {PRIORITY_ORDER.map((priority) => {
-            const checked = priorityFilters.includes(priority);
-            return (
-              <FilterChip
-                key={priority}
-                active={checked}
-                onPress={() => onTogglePriority(priority)}
-                label={t(PRIORITY_LABEL[priority])}
-                icon={<PriorityIcon priority={priority} size={12} />}
-              />
-            );
-          })}
-        </View>
+        <View className="mt-2 border-t border-border" />
+        <PickerSectionLabel>{t("filters.priority")}</PickerSectionLabel>
+        {PRIORITY_ORDER.map((priority) => (
+          <PickerRow
+            key={priority}
+            selected={priorityFilters.includes(priority)}
+            onPress={() => onTogglePriority(priority)}
+            label={t(PRIORITY_LABEL[priority])}
+            leading={<PriorityIcon priority={priority} size={18} />}
+          />
+        ))}
       </ScrollView>
     </View>
   );
@@ -165,49 +160,4 @@ function useScopedFilters(
     return kind === "status" ? allStatus : allPriority;
   }
   return kind === "status" ? myStatus : myPriority;
-}
-
-function SectionLabel({ children }: { children: string }) {
-  return (
-    <View className="px-4 pb-2 pt-4">
-      <Text className="text-[11px] font-medium text-muted-foreground">
-        {children}
-      </Text>
-    </View>
-  );
-}
-
-/** Nova filter chip — h-7 pill, border only at rest, brand fill when on. */
-function FilterChip({
-  active,
-  label,
-  icon,
-  onPress,
-}: {
-  active: boolean;
-  label: string;
-  icon?: ReactNode;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      className={cn(
-        "h-7 flex-row items-center gap-1.5 rounded-full border px-3",
-        active
-          ? "border-primary bg-primary"
-          : "border-border bg-transparent active:bg-secondary",
-      )}
-    >
-      {icon}
-      <Text
-        className={cn(
-          "text-xs font-medium",
-          active ? "text-primary-foreground" : "text-foreground",
-        )}
-      >
-        {label}
-      </Text>
-    </Pressable>
-  );
 }

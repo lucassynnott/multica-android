@@ -15,6 +15,11 @@
  * `useState + Pressable + chevron` triggers (~60 lines of state +
  * handlers); Collapsible owns open/close + a11y semantics in one place.
  *
+ * Visual: one hairline-bordered block of mono 12 muted lines. While the task
+ * is streaming, the last line is the current step and reads in foreground.
+ * Expanded step detail is an indented run behind a left hairline, never a
+ * second panel inside the block.
+ *
  * `defaultOpen` is true on the outer fold while streaming so the user
  * sees activity; the persisted instance below an assistant bubble
  * starts closed (matches web's `OuterProcessFold` behaviour in
@@ -30,6 +35,9 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { useT } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
+import { useColorScheme } from "@/lib/use-color-scheme";
+import { THEME } from "@/lib/theme";
 
 interface Props {
   items: TaskMessagePayload[];
@@ -38,10 +46,22 @@ interface Props {
   isStreaming?: boolean;
 }
 
+/** One trace line: mono 12 on a 20dp line, muted unless it is the current step. */
+const LINE = "font-mono text-xs leading-5";
+/** Expanded detail under a step: indented behind a left hairline. */
+const DETAIL = "ml-[5px] mt-1 mb-1 border-l border-border pl-3";
+
+function useMutedIconColor() {
+  const { colorScheme } = useColorScheme();
+  return THEME[colorScheme].mutedForeground;
+}
+
 export function ChatTimeline({ items, isStreaming = false }: Props) {
   const processSteps = items.filter((i) => i.type !== "text");
   const { t } = useT("chat");
+  const muted = useMutedIconColor();
   if (processSteps.length === 0) return null;
+  const lastIndex = processSteps.length - 1;
 
   return (
     <Collapsible defaultOpen={isStreaming}>
@@ -51,19 +71,24 @@ export function ChatTimeline({ items, isStreaming = false }: Props) {
           accessibilityLabel={t("timeline.steps_count", {
             count: processSteps.length,
           })}
-          className="flex-row items-center gap-1 active:opacity-70"
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 16 }}
+          className="min-h-7 flex-row items-center gap-1.5 self-start active:opacity-70"
         >
-          <Ionicons name="chevron-forward" size={12} color="#71717a" />
+          <Ionicons name="chevron-forward" size={12} color={muted} />
           {isStreaming ? <StreamingDot /> : null}
-          <Text className="text-xs text-muted-foreground">
+          <Text className="font-mono text-xs text-muted-foreground">
             {t("timeline.steps_count", { count: processSteps.length })}
           </Text>
         </View>
       </CollapsibleTrigger>
       <CollapsibleContent>
-        <View className="mt-1 rounded-md border border-border bg-muted/20 px-2 py-1.5 gap-0.5">
-          {processSteps.map((item) => (
-            <StepRow key={`${item.task_id}-${item.seq}`} item={item} />
+        <View className="mt-1 rounded-lg border border-border px-3.5 py-2.5">
+          {processSteps.map((item, index) => (
+            <StepRow
+              key={`${item.task_id}-${item.seq}`}
+              item={item}
+              current={isStreaming && index === lastIndex}
+            />
           ))}
         </View>
       </CollapsibleContent>
@@ -74,18 +99,24 @@ export function ChatTimeline({ items, isStreaming = false }: Props) {
 function StreamingDot() {
   // Single accent dot beside the trigger so the user knows the rows
   // below may still be growing. Real "agent is alive" cue is StatusPill
-  // (breathing dots) above; this is a quiet co-signal.
+  // (breathing dots) below; this is a quiet co-signal.
   return <View className="h-1.5 w-1.5 rounded-full bg-primary" />;
 }
 
-function StepRow({ item }: { item: TaskMessagePayload }) {
+interface StepProps {
+  item: TaskMessagePayload;
+  /** The step the agent is on right now: rendered in foreground. */
+  current: boolean;
+}
+
+function StepRow({ item, current }: StepProps) {
   switch (item.type) {
     case "thinking":
-      return <ThinkingRow item={item} />;
+      return <ThinkingRow item={item} current={current} />;
     case "tool_use":
-      return <ToolCallRow item={item} />;
+      return <ToolCallRow item={item} current={current} />;
     case "tool_result":
-      return <ToolResultRow item={item} />;
+      return <ToolResultRow item={item} current={current} />;
     case "error":
       return <ErrorRow item={item} />;
     default:
@@ -93,22 +124,27 @@ function StepRow({ item }: { item: TaskMessagePayload }) {
   }
 }
 
-function ThinkingRow({ item }: { item: TaskMessagePayload }) {
+function ThinkingRow({ item, current }: StepProps) {
   const text = item.content ?? "";
+  const muted = useMutedIconColor();
   if (!text) return null;
   const preview = text.length > 80 ? `${text.slice(0, 80)}…` : text;
   return (
     <Collapsible>
       <CollapsibleTrigger asChild>
-        <View className="py-0.5 flex-row items-start gap-1.5 active:opacity-70">
+        <View className="flex-row items-start gap-2 active:opacity-70">
           <Ionicons
             name="bulb-outline"
             size={12}
-            color="#a1a1aa"
-            style={{ marginTop: 2 }}
+            color={muted}
+            style={{ marginTop: 4 }}
           />
           <Text
-            className="flex-1 text-xs italic text-muted-foreground"
+            className={cn(
+              LINE,
+              "flex-1",
+              current ? "text-foreground" : "text-muted-foreground",
+            )}
             numberOfLines={1}
           >
             {preview}
@@ -116,59 +152,58 @@ function ThinkingRow({ item }: { item: TaskMessagePayload }) {
         </View>
       </CollapsibleTrigger>
       <CollapsibleContent>
-        <Text className="ml-4 mt-0.5 text-xs italic text-muted-foreground">
-          {text}
-        </Text>
+        <View className={DETAIL}>
+          <Text className={cn(LINE, "text-muted-foreground")}>{text}</Text>
+        </View>
       </CollapsibleContent>
     </Collapsible>
   );
 }
 
-function ToolCallRow({ item }: { item: TaskMessagePayload }) {
+function ToolCallRow({ item, current }: StepProps) {
   const summary = getToolSummary(item);
   const { t } = useT("chat");
+  const muted = useMutedIconColor();
   const hasInput = !!item.input && Object.keys(item.input).length > 0;
+  const line = (
+    <Text
+      className={cn(
+        LINE,
+        "flex-1",
+        current ? "text-foreground" : "text-muted-foreground",
+      )}
+      numberOfLines={1}
+    >
+      {item.tool ?? t("timeline.tool")}
+      {summary ? ` ${summary}` : ""}
+    </Text>
+  );
   // If the call has no expandable input, render a non-interactive row —
   // wrapping a static row in Collapsible adds a wasted tap target.
   if (!hasInput) {
     return (
-      <View className="py-0.5 flex-row items-center gap-1.5">
+      <View className="flex-row items-start gap-2">
         <View style={{ width: 12 }} />
-        <Text className="text-xs font-medium text-foreground">
-          {item.tool ?? t("timeline.tool")}
-        </Text>
-        {summary ? (
-          <Text
-            className="flex-1 text-xs text-muted-foreground"
-            numberOfLines={1}
-          >
-            {summary}
-          </Text>
-        ) : null}
+        {line}
       </View>
     );
   }
   return (
     <Collapsible>
       <CollapsibleTrigger asChild>
-        <View className="py-0.5 flex-row items-center gap-1.5 active:opacity-70">
-          <Ionicons name="chevron-forward" size={12} color="#71717a" />
-          <Text className="text-xs font-medium text-foreground">
-            {item.tool ?? t("timeline.tool")}
-          </Text>
-          {summary ? (
-            <Text
-              className="flex-1 text-xs text-muted-foreground"
-              numberOfLines={1}
-            >
-              {summary}
-            </Text>
-          ) : null}
+        <View className="flex-row items-start gap-2 active:opacity-70">
+          <Ionicons
+            name="chevron-forward"
+            size={12}
+            color={muted}
+            style={{ marginTop: 4 }}
+          />
+          {line}
         </View>
       </CollapsibleTrigger>
       <CollapsibleContent>
-        <View className="ml-4 mt-1 rounded-sm bg-muted/40 px-2 py-1.5">
-          <Text className="text-xs text-muted-foreground">
+        <View className={DETAIL}>
+          <Text className={cn(LINE, "text-muted-foreground")}>
             {JSON.stringify(item.input, null, 2)}
           </Text>
         </View>
@@ -177,9 +212,10 @@ function ToolCallRow({ item }: { item: TaskMessagePayload }) {
   );
 }
 
-function ToolResultRow({ item }: { item: TaskMessagePayload }) {
+function ToolResultRow({ item, current }: StepProps) {
   const output = item.output ?? "";
   const { t } = useT("chat");
+  const muted = useMutedIconColor();
   if (!output) return null;
   const preview = output.length > 80 ? `${output.slice(0, 80)}…` : output;
   const prefix = item.tool
@@ -188,25 +224,29 @@ function ToolResultRow({ item }: { item: TaskMessagePayload }) {
   return (
     <Collapsible>
       <CollapsibleTrigger asChild>
-        <View className="py-0.5 flex-row items-start gap-1.5 active:opacity-70">
+        <View className="flex-row items-start gap-2 active:opacity-70">
           <Ionicons
             name="chevron-forward"
             size={12}
-            color="#71717a"
-            style={{ marginTop: 2 }}
+            color={muted}
+            style={{ marginTop: 4 }}
           />
           <Text
-            className="flex-1 text-xs text-muted-foreground/80"
+            className={cn(
+              LINE,
+              "flex-1",
+              current ? "text-foreground" : "text-muted-foreground",
+            )}
             numberOfLines={1}
           >
-            <Text className="text-xs text-muted-foreground">{prefix}</Text>
+            {prefix}
             {preview}
           </Text>
         </View>
       </CollapsibleTrigger>
       <CollapsibleContent>
-        <View className="ml-4 mt-1 rounded-sm bg-muted/40 px-2 py-1.5">
-          <Text className="text-xs text-muted-foreground">
+        <View className={DETAIL}>
+          <Text className={cn(LINE, "text-muted-foreground")}>
             {output.length > 4000
               ? `${output.slice(0, 4000)}\n${t("timeline.truncated")}`
               : output}
@@ -219,15 +259,16 @@ function ToolResultRow({ item }: { item: TaskMessagePayload }) {
 
 function ErrorRow({ item }: { item: TaskMessagePayload }) {
   const { t } = useT("chat");
+  const { colorScheme } = useColorScheme();
   return (
-    <View className="py-0.5 flex-row items-start gap-1.5">
+    <View className="flex-row items-start gap-2">
       <Ionicons
         name="alert-circle"
         size={12}
-        color="#dc2626"
-        style={{ marginTop: 2 }}
+        color={THEME[colorScheme].destructive}
+        style={{ marginTop: 4 }}
       />
-      <Text className="flex-1 text-xs text-destructive" numberOfLines={3}>
+      <Text className={cn(LINE, "flex-1 text-destructive")} numberOfLines={3}>
         {item.content || t("timeline.error")}
       </Text>
     </View>

@@ -31,6 +31,7 @@ import { resolveAttachmentUrl } from "@/lib/attachment-url";
 import { useColorScheme } from "@/lib/use-color-scheme";
 import { THEME } from "@/lib/theme";
 import { Text } from "@/components/ui/text";
+import { useT } from "@/lib/i18n";
 
 interface Props {
   attachments?: Attachment[];
@@ -58,7 +59,7 @@ export function CommentAttachmentList({ attachments, content }: Props) {
   if (standalone.length === 0) return null;
 
   return (
-    <View className="gap-1.5">
+    <View className="gap-2">
       {standalone.map((attachment) => {
         const isImage = attachment.content_type.startsWith("image/");
         if (isImage) {
@@ -91,6 +92,7 @@ function FileCard({
   theme: typeof THEME["light"];
 }) {
   const sizeLabel = formatBytes(attachment.size_bytes);
+  const { t } = useT("issues");
   return (
     <Pressable
       onPress={() => {
@@ -110,8 +112,8 @@ function FileCard({
         }
       }}
       accessibilityRole="button"
-      accessibilityLabel={`Open ${attachment.filename}`}
-      className="flex-row items-center gap-2 px-3 py-2 rounded-md bg-secondary/60 active:opacity-80"
+      accessibilityLabel={t("a11y.open_file", { name: attachment.filename })}
+      className="min-h-11 flex-row items-center gap-2.5 rounded-lg border border-border bg-card px-3 py-2 active:bg-secondary"
     >
       <Ionicons
         name="document-outline"
@@ -120,13 +122,15 @@ function FileCard({
       />
       <View className="flex-1">
         <Text
-          className="text-sm text-foreground"
+          className="text-[15px] leading-[21px] text-foreground"
           numberOfLines={1}
         >
           {attachment.filename}
         </Text>
         {sizeLabel ? (
-          <Text className="text-xs text-muted-foreground">{sizeLabel}</Text>
+          <Text className="font-mono text-xs text-muted-foreground">
+            {sizeLabel}
+          </Text>
         ) : null}
       </View>
       <Ionicons

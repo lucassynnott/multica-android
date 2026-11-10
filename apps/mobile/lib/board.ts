@@ -130,3 +130,53 @@ export function positionForDrop(
   const after = columnIssues[index]?.position ?? before + 2;
   return (before + after) / 2;
 }
+
+const TRACE_LEFT = [0, 0x40, 0x44, 0x46, 0x47] as const;
+const TRACE_RIGHT = [0, 0x80, 0xa0, 0xb0, 0xb8] as const;
+const DAY_MS = 86_400_000;
+
+/**
+ * How many of `issues` were last updated on each of the last `days` local
+ * calendar days, oldest first; the final entry is the day `now` falls in.
+ * Rows with an unparseable or future `updated_at` are skipped, never guessed.
+ */
+export function activityByDay(
+  issues: Pick<Issue, "updated_at">[],
+  now: Date,
+  days = 12,
+): number[] {
+  const counts = new Array<number>(days).fill(0);
+  const endOfToday = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate() + 1,
+  ).getTime();
+  for (const issue of issues) {
+    const at = Date.parse(issue.updated_at);
+    if (Number.isNaN(at) || at >= endOfToday) continue;
+    const daysAgo = Math.floor((endOfToday - 1 - at) / DAY_MS);
+    if (daysAgo < days) counts[days - 1 - daysAgo]! += 1;
+  }
+  return counts;
+}
+
+/**
+ * A Braille bar trace of per-day counts: two days per glyph, each day a
+ * column of 0–4 dots growing from the bottom. Heights are relative to the
+ * busiest day in the series, and any day with at least one update shows at
+ * least one dot. Returns "" when nothing happened, so callers render nothing
+ * instead of a row of blanks.
+ */
+export function brailleTrace(counts: number[]): string {
+  const max = Math.max(0, ...counts);
+  if (max === 0) return "";
+  const level = (count: number | undefined) =>
+    count ? Math.max(1, Math.round((count / max) * 4)) : 0;
+  let out = "";
+  for (let i = 0; i < counts.length; i += 2) {
+    out += String.fromCharCode(
+      0x2800 + TRACE_LEFT[level(counts[i])]! + TRACE_RIGHT[level(counts[i + 1])]!,
+    );
+  }
+  return out;
+}

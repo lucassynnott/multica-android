@@ -9,6 +9,9 @@ import { Text } from "@/components/ui/text";
 import { TextField } from "@/components/ui/text-field";
 import { Button } from "@/components/ui/button";
 import { MulticaLogo } from "@/components/brand/multica-logo";
+import { TideTexture } from "@/components/ui/tide-texture";
+import { ApiHost } from "@/components/auth/api-host";
+import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/data/auth-store";
 import { i18n, useT } from "@/lib/i18n";
 import { mapAuthError } from "@/lib/auth-error";
@@ -32,6 +35,8 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Visual only: the field's border turns to the ring colour while focused.
+  const [focused, setFocused] = useState(false);
 
   const onSubmit = async () => {
     const trimmed = email.trim();
@@ -52,6 +57,7 @@ export default function Login() {
 
   return (
     <SafeAreaView className="flex-1 bg-background">
+      <TideTexture height={560} opacity={0.11} />
       <KeyboardAwareScrollView
         ref={scrollRef as never}
         // Auth forms used to sit under a KeyboardAvoidingView with a plain
@@ -66,7 +72,7 @@ export default function Login() {
           // Centre when there is room; anchor to the top once the keyboard
           // is up so the field and the submit button both stay above it.
           justifyContent: keyboardVisible ? "flex-start" : "center",
-          paddingHorizontal: 16,
+          paddingHorizontal: 28,
           paddingTop: keyboardVisible ? 12 : 24,
           paddingBottom: keyboardVisible ? 16 : 24,
         }}
@@ -74,20 +80,25 @@ export default function Login() {
         showsVerticalScrollIndicator={false}
         bottomOffset={0}
       >
-          <View className="gap-6">
+          {/* One column, capped so the form does not stretch across the
+              unfolded screen. */}
+          <View className="w-full max-w-[420px] self-center gap-7">
+            <MulticaLogo size={40} />
             <View className="gap-2">
-              <MulticaLogo size={28} />
-              <Text className="text-[22px] font-semibold tracking-tight text-foreground">
+              <Text
+                role="heading"
+                className="text-[30px] font-semibold leading-9 tracking-tight text-foreground"
+              >
                 {t("login.title")}
               </Text>
-              <Text className="text-[13px] text-muted-foreground">
+              <Text className="text-[15px] leading-[22px] text-muted-foreground">
                 {t("login.subtitle")}
               </Text>
             </View>
 
             <View className="gap-4">
-              <View className="gap-2">
-                <Text className="text-xs font-medium text-muted-foreground">
+              <View className="gap-2.5">
+                <Text className="text-[13px] font-medium text-muted-foreground">
                   {t("login.email_label")}
                 </Text>
                 <TextField
@@ -102,7 +113,18 @@ export default function Login() {
                   returnKeyType="send"
                   editable={!submitting}
                   invalid={!!error}
-                  className="h-9"
+                  accessibilityLabel={t("login.email_label")}
+                  onFocus={() => setFocused(true)}
+                  onBlur={() => setFocused(false)}
+                  style={{ fontSize: 16 }}
+                  className={cn(
+                    "h-[52px] bg-card px-4 font-sans",
+                    error
+                      ? "border-destructive"
+                      : focused
+                        ? "border-ring"
+                        : "border-border",
+                  )}
                 />
                 {error ? (
                   <Text className="text-[13px] text-destructive">{error}</Text>
@@ -110,13 +132,17 @@ export default function Login() {
               </View>
 
               <Button
-                className="mt-2"
+                className="h-[52px]"
                 disabled={submitting || !email.trim()}
                 onPress={onSubmit}
               >
-                <Text>{submitting ? t("login.sending") : t("login.send_code")}</Text>
+                <Text className="text-base font-semibold">
+                  {submitting ? t("login.sending") : t("login.send_code")}
+                </Text>
               </Button>
             </View>
+
+            <ApiHost />
           </View>
       </KeyboardAwareScrollView>
     </SafeAreaView>

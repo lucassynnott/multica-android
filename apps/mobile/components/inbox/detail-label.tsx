@@ -91,7 +91,7 @@ export function InboxDetailLabel({
     const status = details.to;
     return (
       <View className={cn("flex-row items-center gap-1", className)}>
-        <Text className="text-xs text-muted-foreground">
+        <Text className="text-[13px] text-muted-foreground">
           {t("type.set_status")}
         </Text>
         <StatusIcon
@@ -100,7 +100,10 @@ export function InboxDetailLabel({
           icon={iconOf(status)} color={colorOf(status)}
           size={12}
         />
-        <Text className="text-xs text-muted-foreground" numberOfLines={1}>
+        <Text
+          className="shrink text-[13px] text-muted-foreground"
+          numberOfLines={1}
+        >
           {labelOf(status)}
         </Text>
       </View>
@@ -111,11 +114,14 @@ export function InboxDetailLabel({
     const priority = details.to as IssuePriority;
     return (
       <View className={cn("flex-row items-center gap-1", className)}>
-        <Text className="text-xs text-muted-foreground">
+        <Text className="text-[13px] text-muted-foreground">
           {t("type.set_priority")}
         </Text>
         <PriorityIcon priority={priority} size={12} />
-        <Text className="text-xs text-muted-foreground" numberOfLines={1}>
+        <Text
+          className="shrink text-[13px] text-muted-foreground"
+          numberOfLines={1}
+        >
           {t(PRIORITY_LABEL[priority])}
         </Text>
       </View>
@@ -171,7 +177,7 @@ export function InboxDetailLabel({
 
   return (
     <Text
-      className={cn("text-xs text-muted-foreground", className)}
+      className={cn("text-[13px] text-muted-foreground", className)}
       numberOfLines={1}
     >
       {text}

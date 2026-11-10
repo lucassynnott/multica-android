@@ -11,7 +11,9 @@ import { issueDetailOptions } from "@/data/queries/issues";
 import { findProject, projectListOptions } from "@/data/queries/projects";
 import { useUpdateIssue } from "@/data/mutations/issues";
 import { useWorkspaceStore } from "@/data/workspace-store";
-import { useNativeSearchBar } from "@/lib/use-native-search-bar";
+import { View } from "react-native";
+import { PickerSearchField } from "@/components/ui/picker-search-field";
+import { usePickerSearch } from "@/lib/use-native-search-bar";
 import { useT } from "@/lib/i18n";
 
 export default function IssueProjectPickerRoute() {
@@ -21,7 +23,7 @@ export default function IssueProjectPickerRoute() {
   const { data: issue } = useQuery(issueDetailOptions(wsId, id));
   const { data: projects = [] } = useQuery(projectListOptions(wsId));
   const updateIssue = useUpdateIssue(id);
-  const query = useNativeSearchBar(t("picker.search_projects"), { autoFocus: true });
+  const search = usePickerSearch(t("picker.search_projects"), { autoFocus: true });
 
   const project = useMemo(
     () => findProject(projects, issue?.project_id ?? null),
@@ -29,13 +31,16 @@ export default function IssueProjectPickerRoute() {
   );
 
   return (
-    <ProjectPickerBody
-      value={project ?? null}
-      query={query}
-      onChange={(next) => {
-        updateIssue.mutate({ project_id: next?.id ?? null });
-        router.back();
-      }}
-    />
+    <View className="flex-1">
+      <PickerSearchField search={search} />
+      <ProjectPickerBody
+        value={project ?? null}
+        query={search.query}
+        onChange={(next) => {
+          updateIssue.mutate({ project_id: next?.id ?? null });
+          router.back();
+        }}
+      />
+    </View>
   );
 }

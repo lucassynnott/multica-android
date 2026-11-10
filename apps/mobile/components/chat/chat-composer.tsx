@@ -135,7 +135,7 @@ function StopButton({ onPress }: { onPress: () => void }) {
     >
       <Pressable
         onPress={onPress}
-        className="h-9 w-9 items-center justify-center rounded-md bg-primary active:opacity-80"
+        className="h-9 w-9 items-center justify-center rounded-lg bg-primary active:opacity-80"
         hitSlop={12}
         accessibilityRole="button"
         accessibilityLabel={t("composer.stop_agent")}

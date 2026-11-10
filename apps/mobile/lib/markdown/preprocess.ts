@@ -112,11 +112,30 @@ function preprocessTaskListStrikethrough(input: string): string {
  * Does not parse — pure regex. Cannot handle nested tags with attributes
  * containing `>`, but those don't appear in our editor output.
  */
-function stripHtml(input: string): string {
+function stripHtmlFromProse(input: string): string {
   return input
     .replace(/<!--[\s\S]*?-->/g, "")
     .replace(/<br\s*\/?>/gi, "  \n")
     .replace(/<\/?[a-z][^>]*>/gi, "");
+}
+
+// Fenced blocks (``` or ~~~, closed or running to the end of the message)
+// and inline code spans. Code is content, not markup: `Map<string, number>`
+// and JSX are tag-shaped, and stripping them deleted the generics and the
+// elements from every code sample an agent posted.
+const CODE_SEGMENT =
+  /(^|\n)([ \t]*)(`{3,}|~{3,})[^\n]*\n[\s\S]*?(?:\n[ \t]*\3[ \t]*(?=\n|$)|$)|(`+)(?!`)[\s\S]*?[^`]\4(?!`)/g;
+
+function stripHtml(input: string): string {
+  let out = "";
+  let cursor = 0;
+  for (const match of input.matchAll(CODE_SEGMENT)) {
+    const start = match.index ?? 0;
+    out += stripHtmlFromProse(input.slice(cursor, start));
+    out += match[0];
+    cursor = start + match[0].length;
+  }
+  return out + stripHtmlFromProse(input.slice(cursor));
 }
 
 export function preprocessMobileMarkdown(input: string): string {

@@ -8,7 +8,7 @@
  * without adding a border that would shift the layout.
  */
 import { useMemo, useState } from "react";
-import { ActivityIndicator, Pressable, View } from "react-native";
+import { ActivityIndicator, Platform, Pressable, View } from "react-native";
 import { FlashList } from "@shopify/flash-list";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
@@ -20,9 +20,9 @@ import type {
   TaskMessagePayload,
 } from "@multica/core/types";
 import type { AgentAvailability } from "@multica/core/agents";
-import { continuousCorners } from "@/lib/radius";
 import { taskMessagesOptions } from "@/data/queries/chat";
 import { Text } from "@/components/ui/text";
+import { ActorAvatar } from "@/components/ui/actor-avatar";
 import { Markdown } from "@/lib/markdown";
 import { ImageSequenceProvider } from "@/lib/markdown/image-sequence";
 import { failureReasonKey } from "@/lib/failure-reason-label";
@@ -43,6 +43,8 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { useT } from "@/lib/i18n";
+import { useColorScheme } from "@/lib/use-color-scheme";
+import { THEME } from "@/lib/theme";
 
 interface Props {
   messages: ChatMessage[];
@@ -173,14 +175,19 @@ export function ChatMessageList({
       renderItem={({ item }) => (
         <MessageRow
           message={item}
+          agent={agent}
           onQuickAction={onQuickAction}
           quickActionsDisabled={quickActionsDisabled}
         />
       )}
+      // The byline above each reply reads the agent, which is not part of
+      // `data`; without this a recycled cell keeps the previous agent's name.
+      extraData={agent?.id}
       ItemSeparatorComponent={MessageSeparator}
       ListFooterComponent={
         showLiveSection ? (
-          <View style={{ paddingTop: 12 }} className="gap-2">
+          <View style={{ paddingTop: 18 }} className="gap-2.5">
+            <AgentByline agent={agent} />
             {showLiveTimeline ? (
               <ChatTimeline items={liveTaskMessages ?? []} isStreaming />
             ) : null}
@@ -192,14 +199,13 @@ export function ChatMessageList({
           </View>
         ) : null
       }
-      // Outer padding mirrors web's max-w-4xl px-5 py-4 container at
-      // mobile scale. Vertical gap between bubbles handled by
+      // 20dp screen gutter, 18dp between turns. Vertical gap handled by
       // ItemSeparatorComponent (FlashList doesn't honour `gap-*` on
       // contentContainer the way FlatList's gap-via-NativeWind did).
       contentContainerStyle={{
-        paddingHorizontal: 16,
-        paddingTop: 12,
-        paddingBottom: 16,
+        paddingHorizontal: 20,
+        paddingTop: 18,
+        paddingBottom: 18,
       }}
       // Chat behavior: initial render at the bottom; when new messages
       // arrive AND the user is within 20% of the bottom, auto-scroll.
@@ -219,7 +225,9 @@ export function ChatMessageList({
       // keyboard down with the finger (iOS); tapping empty space between
       // bubbles dismisses it. `handled` keeps Pressables inside bubbles
       // (long-press action sheet etc.) firing normally.
-      keyboardDismissMode="interactive"
+      // "interactive" is iOS-only (Android treats it as "none"), which left
+      // no way to put the keyboard away by scrolling.
+      keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
       keyboardShouldPersistTaps="handled"
     />
     </Pressable>
@@ -228,15 +236,37 @@ export function ChatMessageList({
 }
 
 function MessageSeparator() {
-  return <View style={{ height: 12 }} />;
+  return <View style={{ height: 18 }} />;
+}
+
+/**
+ * Who is speaking: the agent's tile and name above each reply. Agent replies
+ * are plain prose on the page, so this line (not a bubble) is what separates
+ * them from the user's turns.
+ */
+function AgentByline({ agent }: { agent: Agent | null }) {
+  if (!agent) return null;
+  return (
+    <View className="flex-row items-center gap-2">
+      <ActorAvatar type="agent" id={agent.id} size={22} />
+      <Text
+        className="shrink text-[13px] font-semibold text-foreground"
+        numberOfLines={1}
+      >
+        {agent.name}
+      </Text>
+    </View>
+  );
 }
 
 function MessageRow({
   message,
+  agent,
   onQuickAction,
   quickActionsDisabled,
 }: {
   message: ChatMessage;
+  agent: Agent | null;
   onQuickAction?: (action: ChatQuickAction) => void | Promise<unknown>;
   quickActionsDisabled: boolean;
 }) {
@@ -251,6 +281,7 @@ function MessageRow({
   if (isFailure) {
     return (
       <FailureBubble
+        agent={agent}
         reasonLabel={t(failureReasonKey(message.failure_reason))}
         rawError={message.content}
         elapsedMs={message.elapsed_ms ?? null}
@@ -265,19 +296,19 @@ function MessageRow({
     // serialisation `[MUL-1](mention://issue/<id>)`, inline links, and
     // inline code resolve identically to web's
     // `packages/views/chat/components/chat-message-list.tsx` user branch.
-    // Width is capped at 80% so the bubble keeps the iMessage-style
-    // trailing alignment instead of stretching across the column.
+    // Width is capped at 82% so the bubble keeps its trailing alignment
+    // instead of stretching across the column. The border is always 1dp and
+    // only changes colour for select / long-press, so nothing shifts.
     const body = (
       <View
         className={cn(
-          "self-end max-w-[80%] gap-1.5 rounded-xl border px-3.5 py-2 transition-colors",
+          "self-end max-w-[82%] gap-1.5 rounded-lg border px-3.5 py-2.5",
           isSelecting
-            ? "bg-primary/5 border-primary/30"
+            ? "bg-card border-primary"
             : longPress.isPressed
-              ? "bg-muted border-primary/30"
-              : "bg-muted border-transparent",
+              ? "bg-secondary border-border"
+              : "bg-card border-border",
         )}
-        style={continuousCorners}
       >
         <Markdown
           content={message.content}
@@ -307,6 +338,7 @@ function MessageRow({
   return (
     <AssistantRow
       message={message}
+      agent={agent}
       isSelecting={isSelecting}
       longPress={longPress}
       onQuickAction={onQuickAction}
@@ -331,12 +363,14 @@ function MessageRow({
  */
 function AssistantRow({
   message,
+  agent,
   isSelecting,
   longPress,
   onQuickAction,
   quickActionsDisabled,
 }: {
   message: ChatMessage;
+  agent: Agent | null;
   isSelecting: boolean;
   longPress: ReturnType<typeof useChatMessageLongPress>;
   onQuickAction?: (action: ChatQuickAction) => void | Promise<unknown>;
@@ -356,13 +390,15 @@ function AssistantRow({
   // "Replied in".
   const isNoResponse = message.message_kind === "no_response";
   const { t } = useT("chat");
+  // Plain prose on the page: no bubble, the byline says who is speaking.
   const body = (
-    <View className="gap-1.5">
+    <View className="gap-2.5">
+      <AgentByline agent={agent} />
       {timeline.length > 0 ? (
         <ChatTimeline items={timeline} />
       ) : null}
       {isNoResponse ? (
-        <Text className="text-sm italic text-muted-foreground">
+        <Text className="text-[15px] leading-[23px] text-muted-foreground">
           {t("no_response")}
         </Text>
       ) : (
@@ -397,7 +433,7 @@ function AssistantRow({
     return messageBody;
   }
   return (
-    <View className="gap-2">
+    <View className="gap-3.5">
       {messageBody}
       <QuickActions
         actions={message.quick_actions ?? []}
@@ -436,7 +472,7 @@ function QuickActions({
 
   return (
     <View
-      className="flex-row flex-wrap gap-2 pt-0.5"
+      className="flex-row flex-wrap gap-2"
       accessibilityLabel={t("a11y.suggested_followups")}
     >
       {actions.slice(0, 3).map((action, index) => (
@@ -447,24 +483,23 @@ function QuickActions({
           disabled={blocked}
           onPress={() => void handleSelect(action)}
           className={cn(
-            "h-8 max-w-full flex-row items-center gap-1 rounded-md border px-2.5 active:opacity-70",
-            action.primary
-              ? "border-primary/30 bg-primary/10"
-              : "border-input bg-background",
+            "h-11 max-w-full flex-row items-center gap-1.5 rounded-lg border border-border px-3.5 active:bg-secondary",
             blocked && "opacity-50",
           )}
         >
           <Text
             numberOfLines={1}
             className={cn(
-              "shrink text-[13px] font-medium",
-              action.primary ? "text-primary" : "text-foreground",
+              "shrink text-sm",
+              action.primary
+                ? "font-semibold text-primary"
+                : "text-foreground",
             )}
           >
             {action.label}
           </Text>
           {action.primary ? (
-            <Text className="text-[13px] font-medium text-primary">↗</Text>
+            <Text className="text-sm font-semibold text-primary">↗</Text>
           ) : null}
         </Pressable>
       ))}
@@ -490,17 +525,19 @@ function ElapsedCaption({
         ? t("elapsed.finished", { time: formatElapsedMs(elapsedMs) })
         : t("elapsed.failed", { time: formatElapsedMs(elapsedMs) });
   return (
-    <Text className="text-xs text-muted-foreground/80 mt-1">{label}</Text>
+    <Text className="font-mono text-xs text-muted-foreground">{label}</Text>
   );
 }
 
 function FailureBubble({
+  agent,
   reasonLabel,
   rawError,
   elapsedMs,
   isSelecting,
   longPress,
 }: {
+  agent: Agent | null;
   reasonLabel: string;
   rawError: string;
   elapsedMs: number | null;
@@ -509,24 +546,27 @@ function FailureBubble({
 }) {
   const hasRawError = rawError.trim().length > 0;
   const { t } = useT("chat");
+  const { colorScheme } = useColorScheme();
 
   // B6: pass `selectable={isSelecting}` rather than hard-coding
   // `selectable` — otherwise UIKit's text-selection gesture pre-empts
   // our long-press handler and the action sheet never fires. Select-mode
-  // cue is the border-tint to primary; bg stays destructive so the
-  // failure signal is never lost.
+  // cue is the border turning primary; the reason stays in destructive ink
+  // so the failure signal is never lost.
   const body = (
-    <View className="self-start max-w-[80%]">
+    <View className="gap-2.5">
+      <AgentByline agent={agent} />
       <View
         className={cn(
-          "rounded-xl border bg-destructive/10 px-3.5 py-2 transition-colors",
-          isSelecting || longPress.isPressed
-            ? "border-primary/30"
-            : "border-destructive/30",
+          "self-start max-w-full rounded-lg border px-3.5 py-2.5",
+          isSelecting
+            ? "border-primary"
+            : longPress.isPressed
+              ? "border-border bg-secondary"
+              : "border-border",
         )}
-        style={continuousCorners}
       >
-        <Text className="text-xs font-semibold text-destructive">
+        <Text className="text-[13px] font-semibold text-destructive">
           {reasonLabel}
         </Text>
         {hasRawError ? (
@@ -535,22 +575,23 @@ function FailureBubble({
               <View
                 accessibilityRole="button"
                 accessibilityLabel={t("a11y.show_error_details")}
-                className="mt-1 flex-row items-center gap-1 active:opacity-70"
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 16 }}
+                className="mt-1 min-h-7 flex-row items-center gap-1.5 self-start active:opacity-70"
               >
                 <Ionicons
                   name="chevron-forward"
                   size={12}
-                  color="#71717a"
+                  color={THEME[colorScheme].mutedForeground}
                 />
-                <Text className="text-xs text-muted-foreground">
+                <Text className="text-[13px] text-muted-foreground">
                   {t("details.show")}
                 </Text>
               </View>
             </CollapsibleTrigger>
             <CollapsibleContent>
-              <View className="mt-1 rounded-xs bg-muted/40 px-2 py-1.5">
+              <View className="mt-1 border-l border-border pl-3">
                 <Text
-                  className="text-xs text-muted-foreground"
+                  className="font-mono text-xs leading-5 text-muted-foreground"
                   selectable={isSelecting}
                 >
                   {rawError}

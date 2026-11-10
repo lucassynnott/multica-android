@@ -67,12 +67,8 @@ export const projectIssuesOptions = (wsId: string | null, projectId: string) =>
       "byProject",
       projectId,
     ] as const,
-    queryFn: async ({ signal }) => {
-      const res = await api.listIssues(
-        { project_id: projectId },
-        { signal },
-      );
-      return res.issues;
+    queryFn: ({ signal }) => {
+      return api.listAllIssues({ project_id: projectId }, { signal });
     },
     enabled: !!wsId && !!projectId,
   });

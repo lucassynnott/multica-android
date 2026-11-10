@@ -10,7 +10,9 @@ import { AssigneePickerBody } from "@/components/issue/pickers/assignee-picker-b
 import { issueDetailOptions } from "@/data/queries/issues";
 import { useUpdateIssue } from "@/data/mutations/issues";
 import { useWorkspaceStore } from "@/data/workspace-store";
-import { useNativeSearchBar } from "@/lib/use-native-search-bar";
+import { View } from "react-native";
+import { PickerSearchField } from "@/components/ui/picker-search-field";
+import { usePickerSearch } from "@/lib/use-native-search-bar";
 import { useT } from "@/lib/i18n";
 
 export default function IssueAssigneePickerRoute() {
@@ -19,7 +21,7 @@ export default function IssueAssigneePickerRoute() {
   const wsId = useWorkspaceStore((s) => s.currentWorkspaceId);
   const { data: issue } = useQuery(issueDetailOptions(wsId, id));
   const updateIssue = useUpdateIssue(id);
-  const query = useNativeSearchBar(t("picker.search_people"), { autoFocus: true });
+  const search = usePickerSearch(t("picker.search_people"), { autoFocus: true });
 
   const value =
     issue?.assignee_type && issue?.assignee_id
@@ -27,20 +29,23 @@ export default function IssueAssigneePickerRoute() {
       : null;
 
   return (
-    <AssigneePickerBody
-      value={value}
-      query={query}
-      onChange={(next) => {
-        if (next === null) {
-          updateIssue.mutate({ assignee_type: null, assignee_id: null });
-        } else {
-          updateIssue.mutate({
-            assignee_type: next.type,
-            assignee_id: next.id,
-          });
-        }
-        router.back();
-      }}
-    />
+    <View className="flex-1">
+      <PickerSearchField search={search} />
+      <AssigneePickerBody
+        value={value}
+        query={search.query}
+        onChange={(next) => {
+          if (next === null) {
+            updateIssue.mutate({ assignee_type: null, assignee_id: null });
+          } else {
+            updateIssue.mutate({
+              assignee_type: next.type,
+              assignee_id: next.id,
+            });
+          }
+          router.back();
+        }}
+      />
+    </View>
   );
 }

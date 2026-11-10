@@ -14,6 +14,7 @@ import type { User } from "@multica/core/types";
 import { api, ApiError } from "./api";
 import { clearToken, getToken, setToken } from "./secure-storage";
 import { invalidateSessionEpoch } from "./session-epoch";
+import { queryClient } from "./query-client";
 import { useWorkspaceStore } from "./workspace-store";
 
 interface AuthState {
@@ -101,6 +102,12 @@ export const useAuthStore = create<AuthState>((set) => ({
     invalidateSessionEpoch();
     await clearToken();
     api.setToken(null);
+    // Every sign-out path ends here, so this is where the previous account's
+    // data is dropped. Only the 401 handler used to clear the cache; a manual
+    // sign-out kept the inbox, chat and workspace lists in memory, and the
+    // next account to sign in on the device was shown them until a refetch.
+    await useWorkspaceStore.getState().clear();
+    queryClient.clear();
     set({ user: null });
   },
 

@@ -28,24 +28,28 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { Stack, router, useLocalSearchParams } from "expo-router";
+import { Stack, useLocalSearchParams } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { stripChannelMediaMarkers } from "@multica/core/types";
 import { Text } from "@/components/ui/text";
 import { DescriptionField } from "@/components/issue/description-field";
 import { MentionSuggestionBar } from "@/components/issue/mention-suggestion-bar";
-import { MOBILE_PLACEHOLDER_COLOR } from "@/components/ui/input-tokens";
+import { SubmitIssueButton } from "@/components/issue/submit-issue-button";
 import { issueDetailOptions } from "@/data/queries/issues";
 import { useUpdateIssue } from "@/data/mutations/issues";
 import { buildIssueTextUpdate } from "@/data/issue-edit";
 import { useWorkspaceStore } from "@/data/workspace-store";
 import { useT } from "@/lib/i18n";
+import { useDiscardGuard } from "@/lib/use-discard-guard";
 import { useMentionInput } from "@/lib/use-mention-input";
+import { THEME } from "@/lib/theme";
+import { useColorScheme } from "@/lib/use-color-scheme";
 
 export default function EditIssue() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const wsId = useWorkspaceStore((s) => s.currentWorkspaceId);
   const { t } = useT("issues");
+  const { colorScheme } = useColorScheme();
   const detail = useQuery(issueDetailOptions(wsId, id));
   const update = useUpdateIssue(id);
 
@@ -81,9 +85,16 @@ export default function EditIssue() {
   const canSave =
     seeded && title.trim().length > 0 && dirty && !update.isPending;
 
+  const leave = useDiscardGuard(dirty && !update.isSuccess, {
+    title: t("form.discard_title"),
+    message: t("form.discard_message_issue"),
+    keep: t("form.keep_editing"),
+    discard: t("common:actions.discard"),
+  });
+
   const onCancel = useCallback(() => {
     if (!dirty) {
-      router.back();
+      leave();
       return;
     }
     Alert.alert(
@@ -94,11 +105,11 @@ export default function EditIssue() {
         {
           text: t("common:actions.discard"),
           style: "destructive",
-          onPress: () => router.back(),
+          onPress: () => leave(),
         },
       ],
     );
-  }, [dirty, t]);
+  }, [dirty, leave, t]);
 
   const onSave = useCallback(() => {
     if (!canSave) return;
@@ -110,7 +121,7 @@ export default function EditIssue() {
     // loop. Web/desktop keep baseline protection with their compare UI.
     const patch = buildIssueTextUpdate(title, currentDescription);
     update.mutate(patch, {
-      onSuccess: () => router.back(),
+      onSuccess: () => leave(),
       onError: (err) => {
         Alert.alert(
           t("form.save_failed"),
@@ -118,12 +129,18 @@ export default function EditIssue() {
         );
       },
     });
-  }, [canSave, title, currentDescription, update, t]);
+  }, [canSave, title, currentDescription, update, leave, t]);
 
   const headerLeft = useCallback(
     () => (
-      <Pressable onPress={onCancel} className="px-1 py-1">
-      <Text className="text-[15px] text-primary">{t("common:actions.cancel")}</Text>
+      <Pressable
+        onPress={onCancel}
+        accessibilityRole="button"
+        className="min-h-11 justify-center px-1 active:opacity-60"
+      >
+        <Text className="text-[15px] text-muted-foreground">
+          {t("common:actions.cancel")}
+        </Text>
       </Pressable>
     ),
     [onCancel, t],
@@ -131,55 +148,52 @@ export default function EditIssue() {
 
   const headerRight = useCallback(
     () => (
-      <Pressable
-        onPress={onSave}
+      <SubmitIssueButton
         disabled={!canSave}
-        className={canSave ? "px-1 py-1" : "px-1 py-1 opacity-40"}
-      >
-        <Text className="text-[15px] text-primary font-semibold">
-          {update.isPending ? t("edit.saving") : t("edit.save")}
-        </Text>
-      </Pressable>
+        loading={update.isPending}
+        onPress={onSave}
+        label={t("common:actions.save")}
+        accessibilityLabel={update.isPending ? t("edit.saving") : t("edit.save")}
+      />
     ),
     [canSave, onSave, update.isPending, t],
   );
 
   return (
-    <>
+    <View className="flex-1 bg-background">
       <Stack.Screen options={{ headerLeft, headerRight }} />
       <KeyboardAvoidingView
-        className="flex-1 bg-background"
+        className="flex-1"
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         <ScrollView
           className="flex-1"
-          contentContainerClassName="px-4 pt-4 pb-6 gap-4"
+          contentContainerClassName="px-5 pt-4 pb-6 gap-1"
           keyboardShouldPersistTaps="handled"
         >
           {!detail.data ? (
-            <Text className="text-[13px] text-muted-foreground">
+            <Text className="text-[15px] leading-[21px] text-muted-foreground">
               {t("common:states.loading")}
             </Text>
           ) : (
             <>
-              <Field label={t("common:fields.title")}>
-                <TextInput
-                  value={title}
-                  onChangeText={setTitle}
-                  placeholder={t("new.title_placeholder")}
-                  placeholderTextColor={MOBILE_PLACEHOLDER_COLOR}
-                  className="text-[15px] text-foreground bg-secondary/50 rounded-lg px-3 py-2.5"
-                  returnKeyType="next"
-                  editable={!update.isPending}
-                />
-              </Field>
-
-              <Field label={t("common:fields.description")}>
-                <DescriptionField
-                  description={description}
-                  disabled={update.isPending}
-                />
-              </Field>
+              <TextInput
+                value={title}
+                onChangeText={setTitle}
+                placeholder={t("new.title_placeholder")}
+                placeholderTextColor={THEME[colorScheme].mutedForeground}
+                accessibilityLabel={t("common:fields.title")}
+                // Size is inline, not a `text-*` class: NativeWind adds a
+            // lineHeight with those, which clips descenders in a TextInput.
+            style={{ fontSize: 22 }}
+            className="min-h-12 p-0 font-sans font-semibold text-foreground"
+                returnKeyType="next"
+                editable={!update.isPending}
+              />
+              <DescriptionField
+                description={description}
+                disabled={update.isPending}
+              />
             </>
           )}
         </ScrollView>
@@ -188,23 +202,6 @@ export default function EditIssue() {
             form body. */}
         <MentionSuggestionBar {...description.suggestionBar} />
       </KeyboardAvoidingView>
-    </>
-  );
-}
-
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <View className="gap-2">
-      <Text className="text-[11px] font-medium text-muted-foreground">
-        {label}
-      </Text>
-      {children}
     </View>
   );
 }

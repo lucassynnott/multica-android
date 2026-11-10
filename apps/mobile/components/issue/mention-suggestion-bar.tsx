@@ -227,7 +227,7 @@ export function MentionSuggestionBar({
     // animation is desirable but needs the chat-composer pattern (bare
     // Animated.View outer + className on inner View) — single follow-up.
     <View
-      className="bg-background border-b border-border"
+      className="border-t border-border bg-background"
       style={{ maxHeight: 220 }}
     >
       <FlatList
@@ -251,11 +251,11 @@ export function MentionSuggestionBar({
             return (
               <View
                 className={cn(
-                  "px-3 pt-2 pb-1",
-                  index > 0 && "border-t border-border/60 mt-1",
+                  "px-5 pb-1 pt-3",
+                  index > 0 && "mt-1 border-t border-border",
                 )}
               >
-                <Text className="text-[10px] font-medium text-muted-foreground/80">
+                <Text className="text-[13px] font-semibold text-muted-foreground">
                   {item.label}
                 </Text>
               </View>
@@ -263,9 +263,9 @@ export function MentionSuggestionBar({
           }
           if (item.kind === "empty") {
             return (
-              <View className="px-3 py-3">
-                <Text className="text-xs text-muted-foreground">
-                  No matches.
+              <View className="px-5 py-3">
+                <Text className="text-[13px] text-muted-foreground">
+                  {t("picker.no_matches")}
                 </Text>
               </View>
             );
@@ -276,12 +276,12 @@ export function MentionSuggestionBar({
                 onPress={() =>
                   onSelect({ type: "all", id: "all", name: "all" })
                 }
-                className="flex-row items-center gap-3 px-3 py-2 active:bg-secondary"
+                className="min-h-11 flex-row items-center gap-3 px-5 py-2 active:bg-secondary"
               >
-                <View className="size-7 rounded-full bg-brand/15 items-center justify-center">
-                  <Text className="text-xs font-medium text-brand">@</Text>
+                <View className="size-7 items-center justify-center rounded-lg border border-border bg-secondary">
+                  <Text className="font-mono text-xs text-muted-foreground">@</Text>
                 </View>
-                <Text className="flex-1 text-sm text-foreground">
+                <Text className="flex-1 text-[15px] leading-[21px] text-foreground">
                   {t("suggestions.everyone")}
                 </Text>
                 <Badge label={t("suggestions.all")} />
@@ -298,14 +298,14 @@ export function MentionSuggestionBar({
                     name: item.member.name,
                   })
                 }
-                className="flex-row items-center gap-3 px-3 py-2 active:bg-secondary"
+                className="min-h-11 flex-row items-center gap-3 px-5 py-2 active:bg-secondary"
               >
                 <ActorAvatar
                   type="member"
                   id={item.member.user_id}
                   size={28}
                 />
-                <Text className="flex-1 text-sm text-foreground">
+                <Text className="flex-1 text-[15px] leading-[21px] text-foreground">
                   {item.member.name}
                 </Text>
                 <Badge label={t("suggestions.member")} />
@@ -325,19 +325,18 @@ export function MentionSuggestionBar({
                   })
                 }
                 className={cn(
-                  "flex-row items-center gap-3 px-3 py-2 active:bg-secondary",
+                  "min-h-11 flex-row items-center gap-3 px-5 py-2 active:bg-secondary",
                   !runtimeBound && "opacity-50",
                 )}
               >
                 <ActorAvatar type="agent" id={item.agent.id} size={28} showPresence />
-                <Text className="flex-1 text-sm text-foreground">
+                <Text className="flex-1 text-[15px] leading-[21px] text-foreground">
                   {item.agent.name}
                 </Text>
                 <Badge
                   label={runtimeBound
                     ? t("picker.agent")
                     : t("picker.needs_runtime")}
-                  tone={runtimeBound ? "brand" : "outline"}
                 />
               </Pressable>
             );
@@ -352,13 +351,13 @@ export function MentionSuggestionBar({
                     name: item.squad.name,
                   })
                 }
-                className="flex-row items-center gap-3 px-3 py-2 active:bg-secondary"
+                className="min-h-11 flex-row items-center gap-3 px-5 py-2 active:bg-secondary"
               >
                 <ActorAvatar type="squad" id={item.squad.id} size={28} />
-                <Text className="flex-1 text-sm text-foreground">
+                <Text className="flex-1 text-[15px] leading-[21px] text-foreground">
                   {item.squad.name}
                 </Text>
-                <Badge label={t("picker.squad")} tone="outline" />
+                <Badge label={t("picker.squad")} />
               </Pressable>
             );
           }
@@ -378,7 +377,7 @@ export function MentionSuggestionBar({
                 })
               }
               className={cn(
-                "flex-row items-center gap-3 px-3 py-2 active:bg-secondary",
+                "min-h-11 flex-row items-center gap-3 px-5 py-2 active:bg-secondary",
                 closed && "opacity-60",
               )}
             >
@@ -390,11 +389,14 @@ export function MentionSuggestionBar({
                   size={16}
                 />
               </View>
-              <Text className="text-sm font-medium text-foreground">
+              <Text
+                className="w-[62px] font-mono text-xs text-muted-foreground"
+                numberOfLines={1}
+              >
                 {item.issue.identifier}
               </Text>
               <Text
-                className="flex-1 text-sm text-muted-foreground"
+                className="flex-1 text-[15px] leading-[21px] text-foreground"
                 numberOfLines={1}
               >
                 {item.issue.title}
@@ -407,32 +409,7 @@ export function MentionSuggestionBar({
   );
 }
 
-function Badge({
-  label,
-  tone = "muted",
-}: {
-  label: string;
-  tone?: "muted" | "brand" | "outline";
-}) {
-  return (
-    <View
-      className={cn(
-        "px-1.5 py-0.5 rounded-xs",
-        tone === "brand"
-          ? "bg-brand/10"
-          : tone === "outline"
-            ? "border border-border"
-            : "bg-secondary",
-      )}
-    >
-      <Text
-        className={cn(
-          "text-[10px] font-medium",
-          tone === "brand" ? "text-brand" : "text-muted-foreground",
-        )}
-      >
-        {label}
-      </Text>
-    </View>
-  );
+/** Trailing kind tag ("Member", "Agent"): muted 12, never filled. */
+function Badge({ label }: { label: string }) {
+  return <Text className="text-xs text-muted-foreground">{label}</Text>;
 }

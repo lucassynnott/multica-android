@@ -10,14 +10,11 @@
  * `useColorScheme` everything else in the app uses, and rebuilds the
  * style object whenever the theme flips.
  *
- * Sizing sits one tier below shadcn web defaults because markdown headings
- * inside an issue card are structural, not screen titles. The scale is
- * calibrated against Apple HIG Dynamic Type (Body 17pt, Title 3 20pt,
- * Title 2 22pt, Title 1 28pt) and cross-checked against GitHub Mobile and
- * Linear iOS. Those values are encoded in the `MD_FONT` / `MD_LINE` /
- * `MD_GAP` constants below — these are NOT RNR tokens to replace; they are
- * mobile-specific design constants validated by the 2026-05-09 inline-
- * code incident.
+ * Type follows DESIGN.md ("Graphite"): Schibsted Grotesk for prose, JetBrains
+ * Mono for code, body 15/23. The values are encoded in the `MD_FONT` /
+ * `MD_LINE` / `MD_GAP` constants below. Every colour comes from
+ * `THEME[scheme]`; see docs/markdown-rendering-adr.md for why no colour field
+ * may be left to the library default.
  */
 import { useMemo } from "react";
 import { MOBILE_RADIUS } from "@/lib/radius";
@@ -25,73 +22,62 @@ import { THEME } from "@/lib/theme";
 import { useColorScheme } from "@/lib/use-color-scheme";
 
 /**
- * Typography scale — Apple HIG-calibrated, one tier below shadcn web.
- * h1 maps to HIG Title 3 (20), h2 one step down (18), h3 body+2 (16).
+ * Families registered by the expo-font plugin (app.config.ts). The native
+ * layer resolves `fontFamily` + `fontWeight` to the real cut, so headings ask
+ * for 600 and get the SemiBold file instead of a synthesised bold.
+ */
+const SANS_FONT = "Schibsted Grotesk";
+const MONO_FONT = "JetBrains Mono";
+
+/**
+ * Type scale from DESIGN.md: body 15, secondary 13, titles 20 / 22, with 17
+ * as the one step between a title and body (the same size the chat header
+ * uses for the agent's name). Markdown headings are structure inside a
+ * message or a description, so they top out at the "big title" size.
  */
 const MD_FONT = {
-  body: 14,
-  h1: 20,
-  h2: 18,
-  h3: 16,
-  // h4 = 15 (was 14, same as body) — give h4 a real visual step over body
-  // beyond just fontWeight. h5 stays at 14 so it can read as "bold body"
-  // when authors use it for inline emphasis on a list section.
+  body: 15,
+  h1: 22,
+  h2: 20,
+  h3: 17,
+  // h4 and h5 are body-sized and carried by weight alone; h6 drops to the
+  // secondary size.
   h4: 15,
-  h5: 14,
-  // h6 = 13 (was 12) + foreground (was mutedForeground) — the prior config
-  // rendered h6 as "small gray text" indistinguishable from a caption.
+  h5: 15,
   h6: 13,
   // Code block font size — mirrors the in-house `CodeBlock` component's
-  // `text-[13px]` (see `tokens.ts` → CODE_BLOCK_TEXT_CLASS). The two paths
-  // MUST agree so top-level fenced code (rendered by CodeBlock) and
-  // list-nested code (rendered by enriched via this style) look identical.
-  // Both were lowered from 14 to 13 to match GitHub Mobile / Linear iOS /
-  // Notion iOS — at the same point size mono is visually denser than
-  // PingFang, and 14 read as "louder than body" inside a card.
+  // `text-[13px]`. The two paths MUST agree so top-level fenced code
+  // (rendered by CodeBlock) and list-nested code (rendered by enriched via
+  // this style) look identical. Mono glyphs are visually denser than the
+  // grotesque at the same size, so 13 sits level with 15 body.
   codeBlock: 13,
+  // Inline code sits one step under body for the same reason.
+  code: 14,
 } as const;
 
 const MD_LINE = {
-  // Body lineHeight 24 on fontSize 14 = ratio 1.71. Generous for CJK
-  // paragraph readability (PingFang SC glyphs are taller than SF and
-  // benefit from ≥1.5 leading).
-  //
-  // A 2026-05-19 attempt to reduce this to 20 (ratio 1.43) — to "fix"
-  // the inline-code chip's top-heavy padding — was REVERTED on the same
-  // day after evidence ruled out lineHeight as the actual root cause.
-  // Real root cause: enriched-markdown has hardcoded inline-code padding
-  // (upstream issue #255, maintainer unresponsive as of 2026-05). The
-  // chip artifact is library-specific, not RN-platform-wide. Discord /
-  // Slack / Telegram / Mattermost mobile all use background + mono with
-  // no visible top-heavy issue, confirming this is enriched's bug, not
-  // an RN+iOS structural limitation. See
-  // docs/markdown-rendering-adr.md "Known limitations".
-  body: 24,
-  // Heading lineHeights match each heading's fontSize × ~1.3. We MUST
-  // pass these explicitly: enriched-markdown's heading defaults are
-  // (h1: 36, h2: 30, h3: 26, ...) calibrated for THEIR default fontSize
-  // (30/24/20/...). Mobile uses smaller heading fontSizes (20/18/16/...)
-  // but if we don't override lineHeight, enriched keeps its huge defaults
-  // — h1 at 20pt fontSize + 36pt lineHeight reads as wildly over-spaced.
+  // Body 15 on a 23 line (ratio 1.53): the reading rhythm of the Graphite
+  // mockups, and still ≥1.5 so CJK paragraphs keep their leading.
+  body: 23,
+  // Heading lineHeights MUST be passed explicitly: enriched-markdown's
+  // heading defaults are (h1: 36, h2: 30, h3: 26, ...) calibrated for THEIR
+  // default fontSize (30/24/20/...). Without an override a 22pt h1 would sit
+  // on a 36pt line and read as wildly over-spaced.
   h1: 28,
-  h2: 24,
-  h3: 22,
+  h2: 26,
+  h3: 24,
   h4: 22,
-  h5: 20,
+  h5: 22,
   h6: 19,
 } as const;
 
 const MD_GAP = {
   paragraph: 12,
-  headingTopLarge: 16,
+  headingTopLarge: 18,
   headingTopSmall: 12,
   headingBottomLarge: 8,
   headingBottomSmall: 6,
 } as const;
-
-// Inline code style — see the `code:` entry in the style object below
-// for the full history (2026-05-19 transparent + brand tint workaround
-// → 2026-05-19 reverted to subtle surface-2 chip + foreground text).
 
 export function useMarkdownStyle() {
   const { isDarkColorScheme } = useColorScheme();
@@ -99,23 +85,26 @@ export function useMarkdownStyle() {
 
   return useMemo(
     () => ({
-      // Body / paragraph — text-sm + leading-6 ≈ 1.71. Generous for CJK.
+      // Body / paragraph — 15/23.
       paragraph: {
+        fontFamily: SANS_FONT,
         fontSize: MD_FONT.body,
         lineHeight: MD_LINE.body,
         color: t.foreground,
         marginBottom: MD_GAP.paragraph,
       },
-      // Headings — Apple HIG-calibrated, one tier below shadcn web defaults.
+      // Headings — DESIGN.md scale, all 600.
       h1: {
+        fontFamily: SANS_FONT,
         fontSize: MD_FONT.h1,
         lineHeight: MD_LINE.h1,
-        fontWeight: "700" as const,
+        fontWeight: "600" as const,
         color: t.foreground,
         marginTop: MD_GAP.headingTopLarge,
         marginBottom: MD_GAP.headingBottomLarge,
       },
       h2: {
+        fontFamily: SANS_FONT,
         fontSize: MD_FONT.h2,
         lineHeight: MD_LINE.h2,
         fontWeight: "600" as const,
@@ -124,6 +113,7 @@ export function useMarkdownStyle() {
         marginBottom: MD_GAP.headingBottomLarge,
       },
       h3: {
+        fontFamily: SANS_FONT,
         fontSize: MD_FONT.h3,
         lineHeight: MD_LINE.h3,
         fontWeight: "600" as const,
@@ -132,6 +122,7 @@ export function useMarkdownStyle() {
         marginBottom: MD_GAP.headingBottomSmall,
       },
       h4: {
+        fontFamily: SANS_FONT,
         fontSize: MD_FONT.h4,
         lineHeight: MD_LINE.h4,
         fontWeight: "600" as const,
@@ -140,6 +131,7 @@ export function useMarkdownStyle() {
         marginBottom: MD_GAP.headingBottomSmall,
       },
       h5: {
+        fontFamily: SANS_FONT,
         fontSize: MD_FONT.h5,
         lineHeight: MD_LINE.h5,
         fontWeight: "600" as const,
@@ -148,6 +140,7 @@ export function useMarkdownStyle() {
         marginBottom: MD_GAP.headingBottomSmall,
       },
       h6: {
+        fontFamily: SANS_FONT,
         fontSize: MD_FONT.h6,
         lineHeight: MD_LINE.h6,
         fontWeight: "600" as const,
@@ -175,46 +168,41 @@ export function useMarkdownStyle() {
       underline: {
         color: t.foreground,
       },
+      // Links are the one coloured thing in prose: the accent, underlined so
+      // they do not rely on colour alone.
       link: {
-        color: t.brand,
+        color: t.primary,
         underline: true,
       },
-      // Keep inline code backgrounds transparent: native attributed-string chips
-      // span the line box and cannot be vertically padded by this renderer. Monospace
-      // and a neutral tint identify code without making it look like a link.
-      // Leave fontFamily unset to use the platform's system monospace.
+      // Inline code — JetBrains Mono on `card` with a hairline, the same
+      // surface as a code block. `CodeStyle` has no padding / radius knobs
+      // (upstream #255), so the chip is whatever box the native layer draws;
+      // see docs/markdown-rendering-adr.md "Known limitations" — if the chip
+      // reads top-heavy on a device, set both colours back to "transparent".
+      // Size is one step under body so mono does not read larger than the
+      // grotesque around it, and never larger than block code + 1.
       code: {
-        color: t.mutedForeground,
-        backgroundColor: "transparent",
-        borderColor: "transparent",
-        // Match body (14) and codeBlock (14) — inline code MUST NOT be
-        // larger than block code, otherwise the hierarchy inverts and
-        // the inline token "jumps" out of any paragraph that contains
-        // one. The earlier +1pt was meant to compensate for SF Mono's
-        // smaller cap-height vs PingFang in pure-CJK paragraphs, but
-        // in English-heavy text (variable names, error strings) the
-        // +1 made mono glyphs visibly larger than surrounding Latin
-        // body, which is the opposite of the intent. Visual id stays
-        // strong via monospace family + mutedForeground tint — same
-        // approach as GitHub Mobile / Linear iOS / Notion.
-        fontSize: MD_FONT.body,
-      },
-      // Block code — bigger box, surface-2 background (one tonal tier
-       // above secondary so the box stays visible when the markdown
-       // renders inside a bg-secondary parent like a comment bubble),
-       // mono font. (When the splitter detects a fenced code block it
-       // routes to the in-house `CodeBlock` component instead — this
-       // style is the fallback for any code that stays inside the
-       // enriched prose stream, e.g. code nested in a list item.)
-       // `borderColor` REQUIRED: enriched defaults to `#374151` which
-       // clashes with our background.
-      codeBlock: {
-        fontSize: MD_FONT.codeBlock,
+        fontFamily: MONO_FONT,
         color: t.foreground,
-        backgroundColor: t.surface2,
+        backgroundColor: t.card,
         borderColor: t.border,
+        fontSize: MD_FONT.code,
+      },
+      // Block code — the fallback for code that stays inside the enriched
+      // prose stream (e.g. nested in a list item); top-level fences route to
+      // the in-house `CodeBlock`, and the two must look the same: mono 13 on
+      // `card`, hairline border, panel radius. `borderColor` is REQUIRED:
+      // enriched defaults to `#374151`, which clashes with our background.
+      codeBlock: {
+        fontFamily: MONO_FONT,
+        fontSize: MD_FONT.codeBlock,
+        lineHeight: 20,
+        color: t.foreground,
+        backgroundColor: t.card,
+        borderColor: t.border,
+        borderWidth: 1,
         padding: 12,
-        borderRadius: MOBILE_RADIUS.md,
+        borderRadius: MOBILE_RADIUS.lg,
         marginBottom: MD_GAP.paragraph,
       },
       // Blockquote — `color` is REQUIRED: enriched's default is a hardcoded
@@ -226,6 +214,7 @@ export function useMarkdownStyle() {
       // full-frame border depends on the library schema (STYLES.md doesn't
       // distinguish); needs simulator verification — see TODO below.
       blockquote: {
+        fontFamily: SANS_FONT,
         color: t.mutedForeground,
         fontSize: MD_FONT.body,
         lineHeight: MD_LINE.body,
@@ -240,6 +229,7 @@ export function useMarkdownStyle() {
       // invisible on dark backgrounds. This was the visible bug in #MUL-2395
       // dark-mode screenshot (2026-05-19).
       list: {
+        fontFamily: SANS_FONT,
         color: t.foreground,
         fontSize: MD_FONT.body,
         lineHeight: MD_LINE.body,
@@ -250,32 +240,33 @@ export function useMarkdownStyle() {
         marginLeft: 16,
       },
       image: {
-        borderRadius: MOBILE_RADIUS.md,
+        borderRadius: MOBILE_RADIUS.lg,
         marginBottom: MD_GAP.paragraph,
       },
       // Task lists. `checkedTextColor` REQUIRED: enriched default is `#000000`,
       // making completed items invisible in dark mode.
       taskList: {
-        checkedColor: t.brand,
+        checkedColor: t.primary,
         borderColor: t.border,
-        checkmarkColor: t.brandForeground,
+        checkmarkColor: t.primaryForeground,
         checkedTextColor: t.mutedForeground,
         checkboxSize: 16,
       },
       // GFM tables. Every color field below is required — enriched defaults
       // are all hardcoded light values (#FFFFFF row even, #F9FAFB row odd,
       // #111827 header text), all invisible / clashing in dark mode.
-      // headerBackgroundColor uses `surface-2` (one tier above secondary)
-      // so the header stays distinct when the table renders inside a
-      // bg-secondary parent like a comment bubble.
+      // The header row sits on `secondary`, one step above both the page and
+      // a `card` bubble, so it stays distinct wherever the table renders.
       table: {
+        fontFamily: SANS_FONT,
+        headerFontFamily: SANS_FONT,
         color: t.foreground,
         fontSize: MD_FONT.body,
         lineHeight: MD_LINE.body,
         borderColor: t.border,
-        // Match the compact medium radius used by codeBlock and image.
-        borderRadius: MOBILE_RADIUS.md,
-        headerBackgroundColor: t.surface2,
+        // Match the panel radius used by codeBlock and image.
+        borderRadius: MOBILE_RADIUS.lg,
+        headerBackgroundColor: t.secondary,
         headerTextColor: t.foreground,
         // Transparent rows let the page background show through — works in
         // both light (white page) and dark (near-black page) without a
@@ -303,7 +294,7 @@ export function useMarkdownStyle() {
       math: {
         fontSize: 16,
         color: t.foreground,
-        backgroundColor: t.muted,
+        backgroundColor: t.card,
         padding: 12,
         marginBottom: MD_GAP.paragraph,
         textAlign: "center" as const,

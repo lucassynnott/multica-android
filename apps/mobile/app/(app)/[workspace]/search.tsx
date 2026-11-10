@@ -12,10 +12,11 @@
  * Highlight + snippet line for `match_source` matches preserves the
  * "why did this match" signal users rely on when scanning results.
  *
- * Visual layer (shadcn Nova): every row is the same two-line list row as
- * `IssueRow` — leading priority glyph, title 14/500, one muted meta line
- * (identifier, and the matched snippet when the hit was in a comment) — and
- * every status is a `StatusBadge`/`Badge`, never free-floating coloured text.
+ * Visual layer (Graphite): the field is a bordered `bg-card` panel with its
+ * own clear button; every result is a DESIGN.md "Row" — mono identifier in the
+ * 62dp column (the project icon for a project), title 15, and the status as
+ * 12 muted text. A comment/description hit adds one 13 muted snippet line.
+ * A failed request is its own row with a retry, never "No results".
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -38,12 +39,10 @@ import type {
   SearchProjectResult,
 } from "@multica/core/types";
 import { Text } from "@/components/ui/text";
-import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { PriorityIcon } from "@/components/ui/priority-icon";
 import { ProjectIcon } from "@/components/ui/project-icon";
-import { ProjectStatusIcon } from "@/components/ui/project-status-icon";
-import { StatusBadge } from "@/components/issue/status-badge";
+import { TideTexture } from "@/components/ui/tide-texture";
 import { api } from "@/data/api";
 import { useWorkspaceStore } from "@/data/workspace-store";
 import { useColorScheme } from "@/lib/use-color-scheme";
@@ -54,7 +53,6 @@ import {
   useViewedIssuesStore,
 } from "@/data/viewed-issues-store";
 import { issueDetailOptions } from "@/data/queries/issues";
-import { issueColumnCategory } from "@/lib/issue-status";
 import { useIssueStatuses } from "@/lib/use-issue-statuses";
 import { projectStatusLabel } from "@/lib/project-status";
 import { buildSearchRows, type RowItem } from "@/lib/search-rows";
@@ -113,14 +111,9 @@ function HighlightText({
     <Text className={className} numberOfLines={numberOfLines}>
       {parts.map((p, i) =>
         p.hit ? (
-          // Inline hex (yellow-200) instead of a Tailwind class because the
-          // mobile tailwind.config.js intentionally curates its own palette
-          // (no `yellow-*`) — see apps/mobile/CLAUDE.md "Visual tokens".
-          <Text
-            key={i}
-            className="text-foreground"
-            style={{ backgroundColor: "#fef08a" }}
-          >
+          // A step of surface plus weight, not a colour: vermilion is kept
+          // for actions and unread.
+          <Text key={i} className="bg-secondary font-semibold text-foreground">
             {p.text}
           </Text>
         ) : (
@@ -135,15 +128,12 @@ function HighlightText({
 // RowItem + buildSearchRows live in lib/search-rows.ts so the ordering rules
 // (including the cancelled partition) are testable without mounting the screen.
 
-/**
- * Section label — 11px muted sentence case, matching the grouped issue lists.
- * The count lives in the row, so the label stays quiet.
- */
+/** DESIGN.md "Group header": 44dp, top hairline, name at 13/600. */
 function SectionLabel({ label }: { label: string }) {
   return (
-    <Text className="px-4 pt-4 pb-1.5 text-[11px] font-medium text-muted-foreground">
-      {label}
-    </Text>
+    <View className="h-11 flex-row items-center border-t border-border px-5">
+      <Text className="text-[13px] font-semibold text-foreground">{label}</Text>
+    </View>
   );
 }
 
@@ -157,40 +147,63 @@ function navigateOnTap(slug: string | null, path: string) {
   router.replace(path);
 }
 
-/** One muted meta line: identifier, then the matched snippet when there is one. */
-function MetaLine({
-  identifier,
+/**
+ * One result row. `leading` fills the fixed 62dp column (a mono identifier or
+ * a project icon), `meta` is the trailing 12 muted status text.
+ */
+function ResultRow({
+  leading,
+  title,
   query,
   snippet,
+  meta,
+  onPress,
 }: {
-  identifier: string;
+  leading: React.ReactNode;
+  title: string;
   query: string;
   snippet: string | null;
+  meta: string;
+  onPress: () => void;
 }) {
-  const { colorScheme } = useColorScheme();
   return (
-    <View className="flex-row items-center gap-1.5 mt-0.5">
-      <Text className="text-[11px] text-muted-foreground tabular-nums shrink-0">
-        {identifier}
-      </Text>
-      {snippet ? (
-        <>
-          <Ionicons
-            name="chatbubble-outline"
-            size={11}
-            color={THEME[colorScheme].mutedForeground}
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      className="min-h-11 flex-row items-start gap-2 px-5 py-2.5 active:bg-secondary"
+    >
+      <View className="h-[21px] w-[62px] shrink-0 justify-center">{leading}</View>
+      <View className="min-w-0 flex-1 gap-1">
+        <HighlightText
+          text={title}
+          query={query}
+          className="text-[15px] leading-[21px] text-foreground"
+          numberOfLines={2}
+        />
+        {snippet ? (
+          <HighlightText
+            text={snippet}
+            query={query}
+            className="text-[13px] text-muted-foreground"
+            numberOfLines={1}
           />
-          <View className="flex-1 min-w-0">
-            <HighlightText
-              text={snippet}
-              query={query}
-              className="text-[11px] text-muted-foreground"
-              numberOfLines={1}
-            />
-          </View>
-        </>
-      ) : null}
-    </View>
+        ) : null}
+      </View>
+      <Text
+        className="shrink-0 text-xs leading-[21px] text-muted-foreground"
+        numberOfLines={1}
+      >
+        {meta}
+      </Text>
+    </Pressable>
+  );
+}
+
+function Identifier({ value }: { value: string }) {
+  return (
+    <Text className="font-mono text-xs text-muted-foreground" numberOfLines={1}>
+      {value}
+    </Text>
   );
 }
 
@@ -207,37 +220,16 @@ function SearchIssueRow({ item, query, slug }: SearchIssueRowProps) {
   // (server/internal/handler/issue.go:592). Keep mobile strictly aligned.
   const showSnippet =
     item.match_source === "comment" && !!item.matched_snippet;
-  const { colorOf, labelOf } = useIssueStatuses();
-  const category = issueColumnCategory(item);
+  const { labelOf } = useIssueStatuses();
   return (
-    <Pressable
+    <ResultRow
+      leading={<Identifier value={item.identifier} />}
+      title={item.title}
+      query={query}
+      snippet={showSnippet ? (item.matched_snippet ?? null) : null}
+      meta={labelOf(item.status)}
       onPress={() => navigateOnTap(slug, `/${slug}/issue/${item.id}`)}
-      className="active:bg-secondary px-4 py-3"
-    >
-      <View className="flex-row items-center gap-3">
-        <PriorityIcon priority={item.priority} size={14} />
-        <View className="flex-1 min-w-0">
-          <HighlightText
-            text={item.title}
-            query={query}
-            className="text-sm font-medium text-foreground leading-[19px]"
-            numberOfLines={1}
-          />
-          <MetaLine
-            identifier={item.identifier}
-            query={query}
-            snippet={showSnippet ? (item.matched_snippet ?? null) : null}
-          />
-        </View>
-        <StatusBadge
-          label={labelOf(item.status)}
-          status={item.status}
-          category={category}
-          color={colorOf(item.status)}
-          className="shrink-0"
-        />
-      </View>
-    </Pressable>
+    />
   );
 }
 
@@ -251,38 +243,14 @@ function SearchProjectRow({ item, query, slug }: SearchProjectRowProps) {
   const showSnippet =
     item.match_source === "description" && !!item.matched_snippet;
   return (
-    <Pressable
+    <ResultRow
+      leading={<ProjectIcon icon={item.icon} size="sm" />}
+      title={item.title}
+      query={query}
+      snippet={showSnippet ? (item.matched_snippet ?? null) : null}
+      meta={projectStatusLabel(item.status)}
       onPress={() => navigateOnTap(slug, `/${slug}/project/${item.id}`)}
-      className="active:bg-secondary px-4 py-3"
-    >
-      <View className="flex-row items-center gap-3">
-        <ProjectIcon icon={item.icon} size="md" />
-        <View className="flex-1 min-w-0">
-          <HighlightText
-            text={item.title}
-            query={query}
-            className="text-sm font-medium text-foreground leading-[19px]"
-            numberOfLines={1}
-          />
-          {showSnippet ? (
-            <View className="mt-0.5">
-              <HighlightText
-                text={item.matched_snippet ?? ""}
-                query={query}
-                className="text-[11px] text-muted-foreground"
-                numberOfLines={1}
-              />
-            </View>
-          ) : null}
-        </View>
-        {/* Project status is not an issue status, so it uses the shared Badge
-            surface rather than StatusBadge. */}
-        <Badge variant="outline" className="shrink-0 gap-1.5">
-          <ProjectStatusIcon status={item.status} size={12} />
-          <Badge.Text>{projectStatusLabel(item.status)}</Badge.Text>
-        </Badge>
-      </View>
-    </Pressable>
+    />
   );
 }
 
@@ -292,53 +260,29 @@ interface RecentRowProps {
 }
 
 function RecentRow({ item, slug }: RecentRowProps) {
-  const { colorOf, labelOf } = useIssueStatuses();
-  const category = issueColumnCategory(item);
+  const { labelOf } = useIssueStatuses();
   return (
-    <Pressable
+    <ResultRow
+      leading={<Identifier value={item.identifier} />}
+      title={item.title}
+      query=""
+      snippet={null}
+      meta={labelOf(item.status)}
       onPress={() => navigateOnTap(slug, `/${slug}/issue/${item.id}`)}
-      className="active:bg-secondary px-4 py-3"
-    >
-      <View className="flex-row items-center gap-3">
-        <PriorityIcon priority={item.priority} size={14} />
-        <View className="flex-1 min-w-0">
-          <Text
-            className="text-sm font-medium text-foreground leading-[19px]"
-            numberOfLines={1}
-          >
-            {item.title}
-          </Text>
-          <View className="flex-row items-center gap-2 mt-0.5">
-            <Text className="text-[11px] text-muted-foreground tabular-nums">
-              {item.identifier}
-            </Text>
-          </View>
-        </View>
-        <StatusBadge
-          label={labelOf(item.status)}
-          status={item.status}
-          category={category}
-          color={colorOf(item.status)}
-          className="shrink-0"
-        />
-      </View>
-    </Pressable>
+    />
   );
 }
 
-// Loading state — same row-shaped Skeletons as the inbox and issue lists, so
-// the eye lands on list structure instead of a centered spinner.
+// Loading state — row-shaped skeletons, so the eye lands on list structure
+// instead of a centered spinner.
 function SearchLoading() {
   return (
-    <View className="px-4 pt-4 gap-4">
+    <View className="pt-2">
       {Array.from({ length: 5 }).map((_, i) => (
-        <View key={i} className="flex-row items-center gap-3">
-          <Skeleton className="size-3.5 rounded-full" />
-          <View className="flex-1 gap-2">
-            <Skeleton className="h-3.5 w-3/4" />
-            <Skeleton className="h-3 w-24" />
-          </View>
-          <Skeleton className="h-5 w-16 rounded-full" />
+        <View key={i} className="min-h-11 flex-row items-center gap-2 px-5 py-2.5">
+          <Skeleton className="h-3 w-[54px]" />
+          <Skeleton className="h-3.5 flex-1" />
+          <Skeleton className="h-3 w-12" />
         </View>
       ))}
     </View>
@@ -363,6 +307,10 @@ export default function SearchModal() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResultsState>(EMPTY_RESULTS);
   const [isLoading, setIsLoading] = useState(false);
+  // A request that failed for a reason other than being superseded. Without
+  // it an offline search is indistinguishable from "nothing matched".
+  const [failed, setFailed] = useState(false);
+  const inputRef = useRef<TextInput>(null);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -430,9 +378,13 @@ export default function SearchModal() {
         }
       } catch {
         // Abort throws here too; ignore — a newer request is in flight, or
-        // the user dismissed the modal. Drift / network errors are already
-        // logged inside parseWithFallback + the api logger.
-        if (!controller.signal.aborted) setIsLoading(false);
+        // the user dismissed the modal. Anything else is a real failure and
+        // gets its own row (drift / network errors are already logged inside
+        // parseWithFallback + the api logger).
+        if (!controller.signal.aborted) {
+          setIsLoading(false);
+          setFailed(true);
+        }
       }
     }, DEBOUNCE_MS);
   }, []);
@@ -484,34 +436,59 @@ export default function SearchModal() {
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={["bottom"]}>
+      <TideTexture height={300} />
       <KeyboardAvoidingView
         className="flex-1"
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-        {/* Search input row — page inset 16, hairline under the field. */}
-        <View className="flex-row items-center gap-3 border-b border-border px-4 py-2.5">
-          <Ionicons
-            name="search"
-            size={18}
-            color={THEME[colorScheme].mutedForeground}
-          />
-          <TextInput
-            value={query}
-            onChangeText={handleChange}
-            placeholder={t("list.search_placeholder")}
-            placeholderTextColor={THEME[colorScheme].mutedForeground}
-            autoFocus
-            autoCorrect={false}
-            autoCapitalize="none"
-            returnKeyType="search"
-            clearButtonMode="while-editing"
-            className="flex-1 text-base text-foreground"
-          />
+        {/* The field is a panel in its own right: bordered card, 44dp tall. */}
+        <View className="px-5 pb-3 pt-2">
+          <View className="h-11 flex-row items-center gap-2 rounded-lg border border-border bg-card pl-3">
+            <Ionicons
+              name="search"
+              size={18}
+              color={THEME[colorScheme].mutedForeground}
+            />
+            <TextInput
+              ref={inputRef}
+              value={query}
+              onChangeText={handleChange}
+              placeholder={t("list.search_placeholder")}
+              placeholderTextColor={THEME[colorScheme].mutedForeground}
+              autoFocus
+              autoCorrect={false}
+              autoCapitalize="none"
+              returnKeyType="search"
+              accessibilityLabel={t("list.search_placeholder")}
+              style={{ fontSize: 15, includeFontPadding: false }}
+              className="h-11 flex-1 p-0 font-sans text-foreground"
+            />
+            {/* Android has no `clearButtonMode`, so the button is ours. */}
+            {query.length > 0 ? (
+              <Pressable
+                onPress={() => {
+                  handleChange("");
+                  inputRef.current?.focus();
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={t("picker.clear")}
+                className="size-11 items-center justify-center"
+              >
+                <Ionicons
+                  name="close-circle"
+                  size={18}
+                  color={THEME[colorScheme].mutedForeground}
+                />
+              </Pressable>
+            ) : (
+              <View className="w-1" />
+            )}
+          </View>
         </View>
 
         {/* Body */}
         <FlatList
-          data={data}
+          data={failed ? [] : data}
           renderItem={renderItem}
           keyExtractor={(item) => item.key}
           keyboardShouldPersistTaps="handled"
@@ -520,16 +497,29 @@ export default function SearchModal() {
           ListEmptyComponent={
             isLoading ? (
               <SearchLoading />
+            ) : failed ? (
+              <View className="gap-3 border-t border-border px-5 pt-4">
+                <Text className="text-[15px] leading-[21px] text-foreground">
+                  {t("list.search_failed")}
+                </Text>
+                <Button
+                  variant="outline"
+                  className="min-h-11 self-start"
+                  onPress={() => runSearch(query)}
+                >
+                  <Text>{t("common:actions.retry")}</Text>
+                </Button>
+              </View>
             ) : trimmedQuery && !hasResults ? (
-              <View className="items-center justify-center py-12 px-8">
-                <Text className="text-sm text-muted-foreground text-center leading-[19px]">
-                  No results for &ldquo;{trimmedQuery}&rdquo;
+              <View className="border-t border-border px-5 pt-4">
+                <Text className="text-[15px] leading-[21px] text-muted-foreground">
+                  {t("list.no_results", { query: trimmedQuery })}
                 </Text>
               </View>
             ) : null
           }
           ListFooterComponent={
-            isLoading && hasResults ? (
+            isLoading && hasResults && !failed ? (
               <View className="items-center justify-center py-4">
                 <ActivityIndicator color={THEME[colorScheme].mutedForeground} />
               </View>

@@ -2,10 +2,13 @@
  * Shared message composer used by both the issue-comment thread and the
  * chat tab. Two visual states:
  *
- *   collapsed → pill button (configurable label / icon). Minimal vertical
- *               footprint so the list above gets the full screen.
- *   expanded  → optional reply chip → chip row (@ + image + file) →
- *               plain TextInput → toolbar (`@ 📷 📎 ──── [➤ or Stop]`).
+ *   collapsed → one bar with a top hairline: attach, a field-shaped button
+ *               (configurable label) that opens the composer, and the send
+ *               tile. Minimal vertical footprint so the list above gets the
+ *               full screen.
+ *   expanded  → optional reply chip → bordered `bg-card` input holding the
+ *               chip row (@ + image + file) and a plain TextInput → toolbar
+ *               (`@ 📷 📎 ──── [send tile or Stop]`).
  *
  * Mentions / images / files all live in the chip row OUTSIDE the text
  * input. The input itself is a plain RN `<TextInput multiline>` — no
@@ -57,7 +60,7 @@ import { useMentionDraftStore } from "@/data/stores/mention-draft-store";
 import { useColorScheme } from "@/lib/use-color-scheme";
 import { stripMarkdown } from "@/lib/strip-markdown";
 import { THEME } from "@/lib/theme";
-import { continuousCorners } from "@/lib/radius";
+import { cn } from "@/lib/utils";
 import { Text } from "@/components/ui/text";
 import { IconButton } from "@/components/ui/icon-button";
 import {
@@ -94,6 +97,8 @@ interface Props {
 
   placeholder?: string;
   pillLabel?: string;
+  /** Kept for callers; the Graphite collapsed bar is a field-shaped button
+   *  with no leading glyph, so it is no longer drawn. */
   pillIcon?: keyof typeof Ionicons.glyphMap;
 
   /** Optional controlled-text mode. When `value` + `onChangeText` are
@@ -131,6 +136,10 @@ interface Props {
    *  apply them. Comment's parent does NOT handle keyboard, so the
    *  composer keeps the default `true`. */
   manageKeyboard?: boolean;
+
+  /** The surface the composer sits on. Default is the page; the issue
+   *  detail pane sits on `bg-card` and passes "card" so the bar matches. */
+  surface?: "background" | "card";
 }
 
 function makeLocalId(): string {
@@ -162,7 +171,6 @@ export function MessageComposer({
   uploadContext,
   placeholder,
   pillLabel,
-  pillIcon = "chatbubble-ellipses-outline",
   value: controlledValue,
   onChangeText: controlledOnChange,
   replyTarget = null,
@@ -173,7 +181,9 @@ export function MessageComposer({
   disabled = false,
   disabledReason,
   manageKeyboard = true,
+  surface = "background",
 }: Props) {
+  const surfaceClass = surface === "card" ? "bg-card" : "bg-background";
   const { colorScheme } = useColorScheme();
   const theme = THEME[colorScheme];
   const { t } = useT("chat");
@@ -232,6 +242,7 @@ export function MessageComposer({
     return () => cancelAnimationFrame(frame);
   }, [expanded, triggerSeen, disabled]);
 
+  const hasDraftText = text.trim().length > 0;
   const hasInFlightUpload = attachments.some((a) => a.status === "uploading");
   const canSend =
     !disabled &&
@@ -465,38 +476,103 @@ export function MessageComposer({
     }, 80);
   }, [text, attachments.length, mentions.length, onClearReplyTarget]);
 
+  /** Collapsed attach button: open the composer first so the picked file has
+   *  a chip row to land in, then hand off to the same file picker the
+   *  expanded toolbar uses. Focus afterwards so a cancelled pick still ends
+   *  in the normal "focused, collapses on blur when empty" state. */
+  const onCollapsedAttach = useCallback(async () => {
+    if (disabled) return;
+    setExpanded(true);
+    await onFilePress();
+    requestAnimationFrame(() => inputRef.current?.focus());
+  }, [disabled, onFilePress]);
+
+  // The one primary action of the bar: a 40dp vermilion tile with a dark
+  // arrow, inside a 48dp touch target.
+  const sendButton =
+    isSending && renderStop ? (
+      renderStop()
+    ) : (
+      <Pressable
+        onPress={handleSubmit}
+        disabled={!canSend}
+        accessibilityRole="button"
+        accessibilityLabel={t("composer.send")}
+        accessibilityState={{ disabled: !canSend }}
+        className="size-12 items-center justify-center"
+      >
+        <View
+          className={cn(
+            "size-10 items-center justify-center rounded-lg bg-primary",
+            !canSend && "opacity-40",
+          )}
+        >
+          <Ionicons
+            name="arrow-up"
+            size={20}
+            color={theme.primaryForeground}
+          />
+        </View>
+      </Pressable>
+    );
+
+  // Collapsed: one row — attach, a field-shaped button that opens the
+  // composer, send. Same vertical footprint as before.
   const pillContent = (
     <View
-      className="border-t border-border bg-background px-3 pt-2"
+      className={cn(
+        "flex-row items-center gap-1 border-t border-border pl-2 pr-3 pt-2",
+        surfaceClass,
+      )}
       style={{ paddingBottom: (manageKeyboard ? insets.bottom : 0) + 8 }}
     >
+      <IconButton
+        name="add"
+        iconSize={22}
+        onPress={onCollapsedAttach}
+        disabled={disabled}
+        accessibilityLabel={t("composer.upload_file")}
+        className="h-12 w-12"
+      />
       <Pressable
         onPress={expand}
         disabled={disabled}
         accessibilityRole="button"
         accessibilityLabel={pillLabel}
         accessibilityState={{ disabled }}
-        className="flex-row items-center gap-2 h-11 px-4 rounded-full bg-secondary active:opacity-80"
+        className={cn(
+          "h-11 flex-1 justify-center rounded-lg border border-border bg-card px-3.5 active:bg-secondary",
+          disabled && "opacity-50",
+        )}
       >
-        <Ionicons
-          name={pillIcon}
-          size={18}
-          color={theme.mutedForeground}
-        />
-        <Text className="text-base text-muted-foreground">
-          {disabled && disabledReason ? disabledReason : resolvedPillLabel}
+        <Text
+          className={cn(
+            "text-[15px] leading-[21px]",
+            hasDraftText ? "text-foreground" : "text-muted-foreground",
+          )}
+          numberOfLines={1}
+        >
+          {disabled && disabledReason
+            ? disabledReason
+            : hasDraftText
+              ? text.trim()
+              : resolvedPillLabel}
         </Text>
       </Pressable>
+      {sendButton}
     </View>
   );
 
   const expandedContent = (
     <View
-      className="bg-background px-3 pt-2 gap-2"
+      className={cn(
+        "gap-2 border-t border-border px-3 pt-2",
+        surfaceClass,
+      )}
       style={{ paddingBottom: (manageKeyboard ? insets.bottom : 0) + 4 }}
     >
       {replyTarget && (
-        <View className="px-3 py-1.5 rounded-md bg-secondary/60 gap-0.5">
+        <View className="gap-0.5 rounded-lg bg-secondary px-3 py-2">
           <View className="flex-row items-center gap-2">
             <Ionicons
               name="return-up-back"
@@ -504,19 +580,19 @@ export function MessageComposer({
               color={theme.mutedForeground}
             />
             <Text
-              className="flex-1 text-xs font-medium text-muted-foreground"
+              className="flex-1 text-[13px] font-semibold text-muted-foreground"
               numberOfLines={1}
             >
               {t("composer.replying_to", { name: replyTarget.actorName })}
             </Text>
             <Pressable
               onPress={onClearReplyTarget}
-              hitSlop={8}
+              hitSlop={14}
               accessibilityRole="button"
               accessibilityLabel={t("composer.cancel_reply")}
             >
               <Ionicons
-                name="close-circle"
+                name="close"
                 size={16}
                 color={theme.mutedForeground}
               />
@@ -524,7 +600,7 @@ export function MessageComposer({
           </View>
           {replyTarget.preview ? (
             <Text
-              className="text-xs text-muted-foreground pl-5"
+              className="pl-[22px] text-[13px] text-muted-foreground"
               numberOfLines={2}
             >
               {stripMarkdown(replyTarget.preview)}
@@ -533,10 +609,7 @@ export function MessageComposer({
         </View>
       )}
 
-      <View
-        className="rounded-2xl border border-border bg-secondary"
-        style={continuousCorners}
-      >
+      <View className="rounded-lg border border-border bg-card">
         {(mentions.length > 0 || attachments.length > 0) ? (
           <View className="px-2 pt-2 pb-1">
             <ComposerAttachmentRow
@@ -558,54 +631,39 @@ export function MessageComposer({
           placeholderTextColor={theme.mutedForeground}
           multiline
           editable={!disabled}
-          className="px-4 pt-3 pb-1 text-base text-foreground"
+          className="px-3.5 pb-1 pt-3 font-sans text-[15px] leading-[21px] text-foreground"
           style={{ minHeight: 28, maxHeight: 140, textAlignVertical: "top" }}
         />
+      </View>
 
-        <View className="flex-row items-center px-2 pb-2 pt-1">
-          {/* @ leads the toolbar — highest-signal attachment (only one
-           *  that drives notifications) and cross-resource (people +
-           *  issues), pride-of-place left. */}
-          <IconButton
-            name="at"
-            iconSize={20}
-            color={mentions.length > 0 ? theme.primary : undefined}
-            onPress={onAtPress}
-            accessibilityLabel={t("composer.mention")}
-            className="h-8 w-8"
-          />
-          <IconButton
-            name="image-outline"
-            iconSize={20}
-            onPress={onImagePress}
-            accessibilityLabel={t("composer.upload_image")}
-            className="h-8 w-8"
-          />
-          <IconButton
-            name="attach-outline"
-            iconSize={20}
-            onPress={onFilePress}
-            accessibilityLabel={t("composer.upload_file")}
-            className="h-8 w-8"
-          />
-          <View className="flex-1" />
-          {isSending && renderStop ? (
-            renderStop()
-          ) : (
-            <IconButton
-              name="arrow-up"
-              iconSize={18}
-              color={theme.primaryForeground}
-              variant="default"
-              onPress={handleSubmit}
-              disabled={!canSend}
-              hitSlop={12}
-              className="h-8 w-8 rounded-full"
-              accessibilityLabel={t("composer.send")}
-              accessibilityState={{ disabled: !canSend }}
-            />
-          )}
-        </View>
+      <View className="flex-row items-center">
+        {/* @ leads the toolbar — highest-signal attachment (only one
+         *  that drives notifications) and cross-resource (people +
+         *  issues), pride-of-place left. */}
+        <IconButton
+          name="at"
+          iconSize={20}
+          color={mentions.length > 0 ? theme.primary : undefined}
+          onPress={onAtPress}
+          accessibilityLabel={t("composer.mention")}
+          className="h-11 w-11"
+        />
+        <IconButton
+          name="image-outline"
+          iconSize={20}
+          onPress={onImagePress}
+          accessibilityLabel={t("composer.upload_image")}
+          className="h-11 w-11"
+        />
+        <IconButton
+          name="attach-outline"
+          iconSize={20}
+          onPress={onFilePress}
+          accessibilityLabel={t("composer.upload_file")}
+          className="h-11 w-11"
+        />
+        <View className="flex-1" />
+        {sendButton}
       </View>
     </View>
   );
