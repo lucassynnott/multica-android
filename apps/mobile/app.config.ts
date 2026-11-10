@@ -22,7 +22,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         ? "Multica (Staging)"
         : "Multica (Dev)",
     slug: "multica-mobile",
-    version: "1.1.0",
+    version: "1.1.1",
     // Foldables (Galaxy Z Fold 8) and tablets need the full orientation set;
     // the unfolded 4:3 canvas is used in both landscape and portrait.
     orientation: "default",
@@ -33,7 +33,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     android: {
       // Monotonic; Android refuses to install an APK over a higher code.
       // v1.0.0 shipped with the default (1).
-      versionCode: 2,
+      versionCode: 3,
       package: isProd
         ? "ai.multica.mobile"
         : isStaging
