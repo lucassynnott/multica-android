@@ -14,12 +14,12 @@
   <img alt="expo" src="https://img.shields.io/badge/Expo-SDK%2057-000020?logo=expo&logoColor=white" />
   <img alt="react native" src="https://img.shields.io/badge/React%20Native-0.86-61DAFB?logo=react&logoColor=white" />
   <img alt="typescript" src="https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white" />
-  <img alt="tests" src="https://img.shields.io/badge/tests-307%20passing-brightgreen" />
+  <img alt="tests" src="https://img.shields.io/badge/tests-318%20passing-brightgreen" />
   <img alt="license" src="https://img.shields.io/badge/license-private-lightgrey" />
 </p>
 
 <p align="center">
-  <img src=".github/assets/hero.png" alt="Inbox, Projects and Chat on a folded phone" width="100%" />
+  <img src=".github/assets/hero.png" alt="Inbox, Board and Chat on a folded phone" width="100%" />
 </p>
 
 ---
@@ -41,13 +41,14 @@ guessed at.
 
 ### Inbox that separates what needs you from what happened
 
-Two readings of the same stream: **Needs action** and **Activity**. Unread count lives on the tab, so
-the badge in the tab bar is the number you actually care about — not a total.
+Two readings of the same stream: **Needs action** and **Activity**. Unread count lives on the tab and
+beside the title, so the number you see is the one you actually care about — not a total.
 
 <img src=".github/assets/shots/inbox.png" alt="Inbox" width="360" align="left" hspace="16" vspace="8" />
 
 Every row tells you what changed and why it surfaced — *"Set status to Ready for review"*, *"Task
-failed"*, *"+3 notes"* — with the actor's avatar, the issue key and a relative timestamp. One tap opens
+failed"*, *"+3 notes"* — with the actor's avatar (agents keep their own icon on a square tile, people are circles), the issue
+key and a relative timestamp. One tap opens
 the issue in place; the row also carries the actions you would otherwise open the issue to take.
 
 <br clear="left" />
@@ -58,9 +59,17 @@ Columns come from the workspace's own workflow, in its own order, with its own c
 real signal: title, key, priority, labels, assignee. Move a card and the mutation is optimistic — the
 column counts update before the request lands, and roll back with an explanation if the server refuses.
 
+<p align="center">
+  <img src=".github/assets/shots/board-list.png" alt="Board as a grouped list" width="31%" />
+  <img src=".github/assets/shots/board.png" alt="Board as a kanban" width="31%" />
+  <img src=".github/assets/shots/issue.png" alt="Issue detail" width="31%" />
+</p>
+
+<p align="center"><sub>One picker in the header switches between a dense list and the kanban, and remembers the choice.</sub></p>
+
 <img src=".github/assets/shots/unfolded-board.png" alt="Board on the unfolded screen with the navigation rail" width="100%" />
 
-<p align="center"><sub>Unfolded: the tab bar becomes a rail, and three columns fit beside it.</sub></p>
+<p align="center"><sub>Unfolded: the tab bar becomes a rail with New issue at the top, and the columns fit beside it.</sub></p>
 
 The interesting part is what happens when the server says no. Workflows can restrict where an issue may
 move, and the naive app snaps the card back and says nothing. This one names the blocking workflow and
@@ -100,18 +109,22 @@ top-anchored the moment the keyboard appears.
 <p align="center">
   <img src=".github/assets/shots/my-issues.png" alt="My issues" width="23%" />
   <img src=".github/assets/shots/settings.png" alt="Settings" width="23%" />
-  <img src=".github/assets/shots/more.png" alt="More menu" width="23%" />
-  <img src=".github/assets/shots/inbox-dark.png" alt="Dark mode" width="23%" />
+  <img src=".github/assets/shots/more.png" alt="More" width="23%" />
+  <img src=".github/assets/shots/inbox-light.png" alt="Light mode" width="23%" />
 </p>
 
 Fifty-odd screens' worth of parity with the web client: issues and their timeline, search, pins, agent
-runs, members, workflows, labels, notifications, workspace switching — plus full dark mode, three
+runs, members, workflows, labels, notifications, workspace switching — plus a light theme, three
 locales (English, 简体中文, 繁體中文) and per-workspace scoping throughout.
 
-### Dark mode, all the way down
+### Designed dark, with a light theme too
+
+Neutral greys, one vermilion accent, Schibsted Grotesk with JetBrains Mono for ids and counts, and a
+very quiet animated texture of tiny glyphs in the empty part of each screen (it can be turned off in
+More). The rules are in [`apps/mobile/DESIGN.md`](apps/mobile/DESIGN.md).
 
 <p align="center">
-  <img src=".github/assets/dark.png" alt="Dark mode inbox and board" width="80%" />
+  <img src=".github/assets/light.png" alt="Light theme inbox and board" width="80%" />
 </p>
 
 ---
@@ -119,17 +132,21 @@ locales (English, 简体中文, 繁體中文) and per-workspace scoping througho
 ## Built for the fold
 
 <p align="center">
-  <img src=".github/assets/unfolded.png" alt="Unfolded inbox and board" width="100%" />
+  <img src=".github/assets/unfolded.png" alt="Unfolded: list with issue detail beside it, and the kanban" width="100%" />
 </p>
 
 The Fold 8 is three devices in one: a 467 × 737 dp cover screen, a 734 × 972 dp inner screen, and a
 949 × 855 dp Ultra panel. Three decisions follow from that.
 
 **One navigation tree, two layouts.** The tab bar is hand-built. React Navigation's material bar mislays
-six destinations at 467 dp, and swapping `tabBarPosition` between bottom bar and rail rebuilt the
+its destinations at 467 dp, and swapping `tabBarPosition` between bottom bar and rail rebuilt the
 navigator tree — which reset the selected tab on every fold. Here the same component only changes flex
-direction: bottom bar with icon-only destinations at compact width, leading rail with icon and label when
-unfolded, labels kept in `accessibilityLabel` either way.
+direction: five labelled destinations in a bottom bar at compact width, a leading rail with a New issue
+button when unfolded.
+
+**List and detail side by side.** Unfolded, tapping an issue in the Board's list view, My Issues or the
+Inbox opens it in a pane beside the list instead of replacing the screen. Folding shows the list again;
+unfolding brings the same issue back with its scroll position.
 
 **A fold is a relayout, not a remount.** A fold changes both size *and* density, and Android was
 recreating the activity because `density` was missing from `configChanges`. Board state, scroll position
@@ -151,7 +168,7 @@ same metrics function.
 | **Styling** | NativeWind + React Native Reusables primitives; tokens mirrored in `global.css` and `lib/theme.ts` |
 | **Board** | One read (`issueListOptions`) projected by `lib/board.ts`; one shared move hook for both boards |
 | **Native** | Config plugins for the foldable manifest and NDK pinning — the generated `android/` directory is never edited by hand |
-| **Tests** | Vitest, 42 files / 307 tests, plus `tsc --noEmit` and `expo lint` kept at zero |
+| **Tests** | Vitest, 44 files / 318 tests, plus `tsc --noEmit` and `expo lint` kept at zero |
 
 A few notes that cost real time and are written down in the app so they are not re-learned:
 
@@ -160,8 +177,8 @@ A few notes that cost real time and are written down in the app so they are not 
   `expo-build-properties` did not pass the version through, so a plugin patches `app/build.gradle`.
 - **Android clips children to their parent's bounds.** There is no `overflow: visible`. Every floating
   element — badges, dropdowns, sheets — is anchored to a box tall enough to legally contain it.
-- **A dead sibling `Text` can stop an icon painting.** The tab bar's labels were moved out of flow, and
-  in compact mode removed entirely, rather than hidden with opacity.
+- **Fonts are native families.** Loaded at runtime by name, a custom font gets a synthesised bold on
+  Android; the `expo-font` config plugin registers one file per weight so `fontWeight` picks a real cut.
 - **Insets lie under `wm size`.** The bottom inset can report zero or negative while the gesture pill is
   still drawn; the bar height is computed as `56 + max(inset, 12)` and never padded with a negative.
 
@@ -222,7 +239,7 @@ adb shell am start -a android.intent.action.VIEW -d "multica://applied-leverage/
 ```bash
 pnpm --filter @multica/mobile typecheck   # tsc --noEmit
 cd apps/mobile && ./node_modules/.bin/expo lint
-cd apps/mobile && ./node_modules/.bin/vitest run     # 42 files / 307 tests
+cd apps/mobile && ./node_modules/.bin/vitest run     # 44 files / 318 tests
 ```
 
 ---
